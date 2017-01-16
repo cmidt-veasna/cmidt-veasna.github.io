@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, minimum-scale=1, initial-scale=1, user-scalable=yes">
+
+    <title>cmidt-option-menu demo</title>
+
+    <script src="../../webcomponentsjs/webcomponents-lite.js"></script>
+
+    <link rel="import" href="../../iron-demo-helpers/demo-pages-shared-styles.html">
+    <link rel="import" href="../../iron-demo-helpers/demo-snippet.html">
+
+    <link rel="import" href="../../iron-flex-layout/iron-flex-layout.html">
+    <link rel="import" href="../../iron-list/iron-list.html">
+    <link rel="import" href="../../iron-icons/iron-icons.html">
+    <link rel="import" href="../../paper-icon-button/paper-icon-button.html">
+    <link rel="import" href="../../paper-toolbar/paper-toolbar.html">
+    <link rel="import" href="../../paper-toast/paper-toast.html">
+
+    <link rel="import" href="my-simple-menu-item.html">
+    <link rel="import" href="my-custom-menu-item.html">
+    <link rel="import" href="my-upload-svg.html">
+
+    <link rel="import" href="../cmidt-option-menu.html">
+    <link rel="import" href="../cmidt-option-menu-item.html">
+    <link rel="import" href="../cmidt-option-menu-switchable-item.html">
+
+    <style is="custom-style" include="demo-pages-shared-styles">
+    body {
+        height: 100vh;
+    }
+    </style>
+</head>
+<body unresolved>
+<dom-module id="cmidt-option-menu-sample">
+<template>
+    <style>
+    :host {
+        display: block;
+        position: relative;
+        --paper-spinner-color: #f44242;
+        --paper-spinner-stroke-width: 2px;
+        --paper-toolbar-height: 60px;
+        --paper-toolbar-sm-height: 48px;
+        --paper-toolbar-content: {
+            padding: 0 8px;
+        }
+        --paper-toolbar-title: {
+            @apply(--layout-flex-none);
+            margin-right: 32px;
+        }
+    }
+    .flex-horizontal {
+        @apply(--layout-horizontal);
+        height: 28px;
+    }
+    .flexchild {
+        @apply(--layout-flex);
+    }
+    .green-state {
+        color: #22ff44;
+    }
+    </style>
+    <paper-toolbar>
+        <paper-icon-button icon="menu"></paper-icon-button>
+        <div class="title">Demo</div>
+        <cmidt-option-menu id="option" class="flexchild" on-item-tap="_handleMenuItemTap">
+            <cmidt-option-menu-item id="shopping" title="add shopping" icon="icons:add-shopping-cart"></cmidt-option-menu-item>
+            <cmidt-option-menu-item id="create" title="create" icon="icons:create" disabled></cmidt-option-menu-item>
+            <cmidt-option-menu-switchable-item id="switchable0" auto>
+                <cmidt-option-menu-item id="download" title="download" icon="icons:cloud-download" selected></cmidt-option-menu-item>
+                <cmidt-option-menu-item id="past" title="paste" icon="icons:content-paste"></cmidt-option-menu-item>
+            </cmidt-option-menu-switchable-item>
+            <cmidt-option-menu-item id="build" title="build" icon="icons:build"></cmidt-option-menu-item>
+            <cmidt-option-menu-item id="cloud" title="cloud" icon="icons:cloud"></cmidt-option-menu-item>
+            <cmidt-option-menu-item id="archive" title="archive" icon="icons:archive"></cmidt-option-menu-item>
+            <cmidt-option-menu-switchable-item id="custom-upload">
+                <my-custom-menu-item id="upload-custom" title="upload" selected></my-custom-menu-item>
+                <cmidt-option-menu-item id="done" title="done" icon="icons:done" class="green-state"></cmidt-option-menu-item>
+            </cmidt-option-menu-switchable-item>
+            <cmidt-option-menu-item id="backup" title="backup" icon="icons:backup"></cmidt-option-menu-item>
+            <cmidt-option-menu-switchable-item id="backup-mode" alway-show>
+                <cmidt-option-menu-item id="upload" title="upload" icon="icons:file-upload" selected></cmidt-option-menu-item>
+                <my-simple-menu-item id="progress" title="Uploading"></my-simple-menu-item>
+                <cmidt-option-menu-item id="done" title="done" icon="icons:done" class="green-state"></cmidt-option-menu-item>
+            </cmidt-option-menu-switchable-item>
+            <cmidt-option-menu-item id="copy" title="copy" icon="icons:content-copy" alway-hide></cmidt-option-menu-item>
+        </cmidt-option-menu>
+    </paper-toolbar>
+    <iron-list style="height: 320px; margin:auto; padding: 16px;" items="[[messages]]">
+        <template>
+            <div class="flex-horizontal">
+                <div class="flexchild">Event item id: <b>[[item.id]]</b></div>
+                <div style="width: 160px;">item title: <b>[[item.title]]</b></div>
+                <div style="width: 160px;">is from overflow: <b>[[item.overflow]]</b></div>
+            </div>
+        </template>
+    </iron-list>
+    <paper-toast id="toast"></paper-toast>
+</template>
+<script>
+HTMLImports.whenReady(function() {
+    Polymer({
+        is: 'cmidt-option-menu-sample',
+
+        properties: {
+            messages: {
+                type: Array,
+                value: []
+            }
+        },
+
+        _handleMenuItemTap: function(e){
+            var item = e.detail.item;
+            this.splice('messages', 0, 0, item);
+            console.log(item);
+            switch (item.id) {
+                case "upload":
+                    item.switchable.setFreeze(true);
+                    item.switchable.setSelectedItemId("progress");
+                    this.async(function(){
+                        item.switchable.setSelectedItemId("done");
+                        this.$.toast.text = "Upload data successfully.";
+                        this.$.toast.open();
+                        this.async(function() {
+                            item.switchable.setSelectedItemId("upload");
+                            item.switchable.setFreeze(false);
+                        }, 1500);
+                    }, 3000);
+                    break;
+                case 'upload-custom':
+                    item.item.startAnimation();
+                    item.switchable.setFreeze(true);
+                    this.async(function(){
+                        item.item.stopAnimation();
+                        item.switchable.setSelectedItemId("done");
+                        this.$.toast.text = "Upload data successfully.";
+                        this.$.toast.open();
+                        this.async(function() {
+                            item.switchable.setSelectedItemId("upload-custom");
+                            item.switchable.setFreeze(false);
+                        }, 1500);
+                    }, 4000);
+                    break;
+                default:
+
+            }
+        }
+    });
+});
+</script>
+</dom-module>
+<cmidt-option-menu-sample></cmidt-option-menu-sample>
+</body>
+</html>

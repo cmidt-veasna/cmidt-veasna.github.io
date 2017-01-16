@@ -1,0 +1,83 @@
+<link rel="import" href="../../polymer/polymer.html">
+<link rel="import" href="../../paper-spinner/paper-spinner-lite.html">
+
+<link rel="import" href="../cmidt-option-menu-item-behavior.html">
+<link rel="import" href="../cmidt-option-menu-item-shared-style.html">
+
+<!--
+`my-simple-menu-item`
+
+
+@demo demo/index.html
+-->
+
+<dom-module id="my-simple-menu-item">
+<template>
+    <style include="cmidt-option-menu-item-shared-styles"></style>
+    <style>
+    .item {
+        @apply(--layout-horizontal);
+        @apply(--layout-center-center);
+        height: 100%;
+    }
+
+    :host[show-title] .item {
+        @apply(--layout-start-justified);
+    }
+
+    paper-spinner-lite {
+        width: var(--inner-item-width);
+        height: var(--inner-item-height);
+        min-width: var(--inner-item-width);
+        min-height: var(--inner-item-height));
+    }
+
+    span {
+        font-size: 14px;
+        text-transform: uppercase;
+        margin: 0 12px;
+    }
+    </style>
+    <div class="item">
+        <paper-spinner-lite id="progress" active></paper-spinner-lite>
+        <span id="title" hidden="[[!_shouldShowTitle(showTitle, title)]]">[[title]]</span>
+    </div>
+</template>
+
+<script>
+Polymer({
+
+    is: 'my-simple-menu-item',
+
+    behaviors: [
+        Cmidt.OptionMenuItemBehavior
+    ],
+
+    animatableElement: function(){
+        return this.$.progress;
+    },
+
+    onDefineAnimationDefinition: function(animateObj){
+        animateObj['visible'].push({
+            name: 'fade-in-animation',
+            node: this.$.title,
+            timing: {
+                duration: 420
+            }
+        });
+        animateObj['invisible'].push({
+            name: 'fade-out-animation',
+            node: this.$.title,
+            timing: {
+                duration: 420
+            }
+        });
+    },
+
+    _shouldShowTitle: function(showTitle, title) {
+        return showTitle && title;
+    },
+
+});
+</script>
+</dom-module>

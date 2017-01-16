@@ -1,0 +1,101 @@
+<link rel="import" href="../polymer/polymer.html">
+<link rel="import" href="../iron-flex-layout/iron-flex-layout.html">
+<link rel="import" href="../iron-icon/iron-icon.html">
+<link rel="import" href="cmidt-option-menu-item-behavior.html">
+<link rel="import" href="cmidt-option-menu-item-shared-style.html">
+<!--
+`cmidt-option-menu-item` is menu item use to display icon when it attached to option menu
+and will display title along with icon when it attached to overflow dropdown menu.
+
+Example:
+
+    <cmidt-option-menu-item
+        id="shopping"
+        title="add shopping"
+        icon="icons:add-shopping-cart"
+        disabled
+        alway-show>
+    </cmidt-option-menu-item>
+
+@demo demo/index.html
+-->
+
+<dom-module id="cmidt-option-menu-item">
+<template>
+    <style include="cmidt-option-menu-item-shared-styles"></style>
+    <style>
+    .item {
+        @apply(--layout-horizontal);
+        @apply(--layout-center-center);
+        height: 100%;
+    }
+
+    :host[show-title] .item {
+        @apply(--layout-start-justified);
+    }
+
+    iron-icon {
+        --iron-icon-width: var(--inner-item-width);
+        --iron-icon-height: var(--inner-item-height);
+        min-width: var(--inner-item-width);
+        min-height: var(--inner-item-width);
+    }
+
+    span {
+        font-size: 14px;
+        text-transform: uppercase;
+        margin: 0 12px;
+    }
+    </style>
+    <div class="item">
+        <iron-icon id="button" noink="[[noink]]" icon="[[icon]]" disabled="[[disabled]]"></iron-icon>
+        <span id="title" hidden="[[!_shouldShowTitle(showTitle, title)]]">[[title]]</span>
+    </div>
+</template>
+
+<script>
+Polymer({
+
+    is: 'cmidt-option-menu-item',
+
+    behaviors: [
+        Cmidt.OptionMenuItemBehavior
+    ],
+
+    /**
+     * Inherit method from `cmidt-option-menu-item-behavior` behaviors. Custom item implement menu item
+     * behavior should return an element which can be animate in occurred of event remove, add, show and hide.
+     */
+    animatableElement: function(){
+        return this.$.button;
+    },
+
+    /**
+     * Inherit method from `cmidt-option-menu-item-behavior` behaviors. Custom item implement menu item
+     * behavior should override this method and attach the new animation as needed. It's also add new
+     * animation to the existing animation sequential.
+     */
+    onDefineAnimationDefinition: function(animateObj){
+        animateObj['visible'].push({
+            name: 'fade-in-animation',
+            node: this.$.title,
+            timing: {
+                duration: 420
+            }
+        });
+        animateObj['invisible'].push({
+            name: 'fade-out-animation',
+            node: this.$.title,
+            timing: {
+                duration: 420
+            }
+        });
+    },
+
+    _shouldShowTitle: function(showTitle, title) {
+        return showTitle && title;
+    },
+
+});
+</script>
+</dom-module>

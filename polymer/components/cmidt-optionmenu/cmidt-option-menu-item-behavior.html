@@ -1,0 +1,89 @@
+<link rel="import" href="../polymer/polymer.html">
+<link rel="import" href="../iron-behaviors/iron-button-state.html">
+<link rel="import" href="../paper-behaviors/paper-ripple-behavior.html">
+<link rel="import" href="cmidt-option-menu-generic-item-behavior.html">
+<!--
+`cmidt-option-menu-item-behavior`
+
+
+@demo demo/index.html
+-->
+<script>
+
+var Cmidt = Cmidt || {};
+
+/** @polymerBehavior Cmidt.OptionMenuItemBehavior */
+var OptionMenuItemBehaviorImpl = {
+
+    properties: {
+        _rippleRetangle: {
+            type: Boolean,
+            value: false,
+            notify: true,
+            observer: "_onRippleFormChanged"
+        }
+    },
+
+    observers: [
+        '_focusedChanged(receivedFocusFromKeyboard)'
+    ],
+
+    attached: function() {
+        this._rippleRetangle = this.parentNode && (this.parentNode.localName != 'cmidt-option-menu' &&
+                ((typeof this.parentNode._isSwitchableMenuItem !== 'undefined' && !this.parentNode._isSwitchableMenuItem) ||
+                this.parentNode.parentNode.localName != 'cmidt-option-menu'));
+    },
+
+    _focusedChanged: function(receivedFocusFromKeyboard) {
+        if (receivedFocusFromKeyboard) {
+            this.ensureRipple();
+        }
+        if (this.hasRipple()) {
+            this._ripple.holdDown = receivedFocusFromKeyboard;
+        }
+    },
+
+    _createRipple: function() {
+        this._supportRipple();
+        this._ripple = Polymer.PaperRippleBehavior._createRipple();
+        this._ripple.id = 'ink';
+        this._ripple.setAttribute('center', '');
+        if (!this._rippleRetangle){
+            this._ripple.classList.add('circle');
+        }
+        return this._ripple;
+    },
+
+    _supportRipple: function(){
+        // this.noink = this.parentNode && this.parentNode._isSwitchableMenuItem;
+        // return this.noink;
+    },
+
+    _onRippleFormChanged: function(){
+        if (this._ripple){
+            this.toggleClass('circle', !this._rippleRetangle, this._ripple);
+        }
+    },
+
+    /**
+     * Manually set ripple background shape. If retangle is true then the ripple will
+     * display as retangle otherwise it will display as circle.
+     */
+    setRippleRetangle: function(retangle){
+        if (this._ripple){
+            this._rippleRetangle = retangle;
+            this.toggleClass('circle', !this._rippleRetangle, this._ripple);
+        }
+    }
+
+};
+
+Cmidt.OptionMenuItemBehavior = [
+    Polymer.IronButtonState,
+    Polymer.IronControlState,
+    Polymer.PaperRippleBehavior,
+    Cmidt.OptionMenuGenericItemBehavior,
+    OptionMenuItemBehaviorImpl
+];
+
+</script>

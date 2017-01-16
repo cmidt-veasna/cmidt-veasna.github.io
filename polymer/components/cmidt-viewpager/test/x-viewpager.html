@@ -1,0 +1,84 @@
+<link rel="import" href="../../polymer/polymer.html">
+<link rel="import" href="../cmidt-viewpager.html">
+
+<dom-module id="x-viewpager">
+<template>
+    <style>
+    :host {
+        --cmidt-page: {
+            margin-bottom: 20px;
+        }
+    }
+    .pager {
+        width: 450px;
+        height: 320px;
+        margin: auto;
+    }
+    .item {
+        overflow: scroll;
+    }
+    .title {
+        font-size: 16px;
+        font-weight: bold;
+        color: black;
+    }
+    .date {
+        font-size: 11px;
+        color: #5c5c5c;
+        margin: 8px 0 16px 0;
+    }
+    .content {
+        font-size: 13px;
+        color: #6c6c6c;
+    }
+    </style>
+
+    <cmidt-viewpager id="pager" class="pager" enable-extra-event
+        on-page-attached='_onPageAttached'
+        on-page-detached='_onPageDetached'>
+        <template>
+            <div class="item">
+                <div>
+                    <div class="title">[[item.title]]</div>
+                    <div class="date">[[item.date]]</div>
+                    <div class="content">[[item.content]]</div>
+                </div>
+            </div>
+        </template>
+    </cmidt-viewpager>
+</template>
+</dom-module>
+
+<script>
+Polymer({
+    is: 'x-viewpager',
+
+    //_items: [],
+
+    get pager() {
+        return this.$.pager;
+    },
+
+    ready: function() {
+        var items = [];
+        for (var i = 0; i < 1; i++){
+                items.push({index: (i * 10) + 1, title:"Android Nougat 7.0 Release", date:"Sunday, 11, December 2016", content:"Lorem ipsum dolor sit amet, id patrioque voluptaria rationibus has, essent inermis conceptam ius ex. Cu facilis civibus temporibus pri. Convenire adolescens sed ut. Cu inani mucius maluisset mel. Graeco torquatos forensibus vix ex, aliquip mandamus mediocrem sed ei. Pri brute iudico quodsi an, elit everti pro ad. Ad nam soluta iriure, ne invenire indoctum vituperata pro. Ea quaeque disputando quo, duo discere aliquam reformidans ne. Nibh accusata eam in. Quas dolor an ius. Vel id fierent albucius, ex vim cibo harum audiam. Ea velit postulant suavitate per, qui eu tibique erroribus. No equidem accusam vulputate vis, partiendo expetendis duo et, cu elitr reformidans nec. An saepe docendi percipitur est. Ei adhuc facilis antiopam eum, odio alii novum at pri."});
+                items.push({index: (i * 10) + 2, title:"Facebook launch Video chat", date:"Sunday, 11, December 2016", content:"Lorem ipsum dolor sit amet, id patrioque voluptaria rationibus has, essent inermis conceptam ius ex. Cu facilis civibus temporibus pri. Convenire adolescens sed ut. Cu inani mucius maluisset mel. Graeco torquatos forensibus vix ex, aliquip mandamus mediocrem sed ei. Pri brute iudico quodsi an, elit everti pro ad. Ad nam soluta iriure, ne invenire indoctum vituperata pro. Ea quaeque disputando quo, duo discere aliquam reformidans ne. Nibh accusata eam in. Quas dolor an ius. Vel id fierent albucius, ex vim cibo harum audiam. Ea velit postulant suavitate per, qui eu tibique erroribus. No equidem accusam vulputate vis, partiendo expetendis duo et, cu elitr reformidans nec. An saepe docendi percipitur est. Ei adhuc facilis antiopam eum, odio alii novum at pri."});
+                items.push({index: (i * 10) + 3, title:"iOS 10.2.1 Release", date:"Sunday, 11, December 2016", content:"Lorem ipsum dolor sit amet, id patrioque voluptaria rationibus has, essent inermis conceptam ius ex. Cu facilis civibus temporibus pri. Convenire adolescens sed ut. Cu inani mucius maluisset mel. Graeco torquatos forensibus vix ex, aliquip mandamus mediocrem sed ei. Pri brute iudico quodsi an, elit everti pro ad. Ad nam soluta iriure, ne invenire indoctum vituperata pro. Ea quaeque disputando quo, duo discere aliquam reformidans ne. Nibh accusata eam in. Quas dolor an ius. Vel id fierent albucius, ex vim cibo harum audiam. Ea velit postulant suavitate per, qui eu tibique erroribus. No equidem accusam vulputate vis, partiendo expetendis duo et, cu elitr reformidans nec. An saepe docendi percipitur est. Ei adhuc facilis antiopam eum, odio alii novum at pri. Lorem ipsum dolor sit amet, id patrioque voluptaria rationibus has, essent inermis conceptam ius ex. Cu facilis civibus temporibus pri. Convenire adolescens sed ut. Cu inani mucius maluisset mel. Graeco torquatos forensibus vix ex, aliquip mandamus mediocrem sed ei. Pri brute iudico quodsi an, elit everti pro ad. Ad nam soluta iriure, ne invenire indoctum vituperata pro. Ea quaeque disputando quo, duo discere aliquam reformidans ne. Nibh accusata eam in. Quas dolor an ius. Vel id fierent albucius, ex vim cibo harum audiam. Ea velit postulant suavitate per, qui eu tibique erroribus. No equidem accusam vulputate vis, partiendo expetendis duo et, cu elitr reformidans nec. An saepe docendi percipitur est. Ei adhuc facilis antiopam eum, odio alii novum at pri."});
+                items.push({index: (i * 10) + 4, title:"Go 1.8 Release", date:"Sunday, 11, December 2016", content:"Lorem ipsum dolor sit amet, id patrioque voluptaria rationibus has, essent inermis conceptam ius ex. Cu facilis civibus temporibus pri. Convenire adolescens sed ut. Cu inani mucius maluisset mel. Graeco torquatos forensibus vix ex, aliquip mandamus mediocrem sed ei. Pri brute iudico quodsi an, elit everti pro ad. Ad nam soluta iriure, ne invenire indoctum vituperata pro. Ea quaeque disputando quo, duo discere aliquam reformidans ne. Nibh accusata eam in. Quas dolor an ius. Vel id fierent albucius, ex vim cibo harum audiam. Ea velit postulant suavitate per, qui eu tibique erroribus. No equidem accusam vulputate vis, partiendo expetendis duo et, cu elitr reformidans nec. An saepe docendi percipitur est. Ei adhuc facilis antiopam eum, odio alii novum at pri."});
+                items.push({index: (i * 10) + 5, title:"Polymer is awesome", date:"Sunday, 11, December 2016", content:"Lorem ipsum dolor sit amet, id patrioque voluptaria rationibus has, essent inermis conceptam ius ex. Cu facilis civibus temporibus pri. Convenire adolescens sed ut. Cu inani mucius maluisset mel. Graeco torquatos forensibus vix ex, aliquip mandamus mediocrem sed ei. Pri brute iudico quodsi an, elit everti pro ad. Ad nam soluta iriure, ne invenire indoctum vituperata pro. Ea quaeque disputando quo, duo discere aliquam reformidans ne. Nibh accusata eam in. Quas dolor an ius. Vel id fierent albucius, ex vim cibo harum audiam. Ea velit postulant suavitate per, qui eu tibique erroribus. No equidem accusam vulputate vis, partiendo expetendis duo et, cu elitr reformidans nec. An saepe docendi percipitur est. Ei adhuc facilis antiopam eum, odio alii novum at pri."});
+                items.push({index: (i * 10) + 6, title:"Sample ViewPager", date:"Sunday, 11, December 2016", content:"Lorem ipsum dolor sit amet, id patrioque voluptaria rationibus has, essent inermis conceptam ius ex. Cu facilis civibus temporibus pri. Convenire adolescens sed ut. Cu inani mucius maluisset mel. Graeco torquatos forensibus vix ex, aliquip mandamus mediocrem sed ei. Pri brute iudico quodsi an, elit everti pro ad. Ad nam soluta iriure, ne invenire indoctum vituperata pro. Ea quaeque disputando quo, duo discere aliquam reformidans ne. Nibh accusata eam in. Quas dolor an ius. Vel id fierent albucius, ex vim cibo harum audiam. Ea velit postulant suavitate per, qui eu tibique erroribus. No equidem accusam vulputate vis, partiendo expetendis duo et, cu elitr reformidans nec. An saepe docendi percipitur est. Ei adhuc facilis antiopam eum, odio alii novum at pri."});
+        }
+        this.$.pager.items = items;
+    },
+
+    _onPageAttached: function(event) {
+        event.detail.item.object.marked = true;
+    },
+
+    _onPageDetached: function(event) {
+        event.detail.item.object.reusable = true;
+    },
+
+});
+</script>

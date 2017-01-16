@@ -1,0 +1,146 @@
+<link rel="import" href="../polymer/polymer.html">
+<link rel="import" href="cmidt-option-menu-generic-item-behavior.html">
+<!--
+`cmidt-option-menu-switchable-item-behavior`
+
+
+@demo demo/index.html
+-->
+<script>
+var Cmidt = Cmidt || {};
+
+/** @polymerBehavior Cmidt.OptionMenuSwitchableItemBehavior */
+var OptionMenuSwitchableItemBehaviorImpl = {
+
+    properties: {
+        /**
+         * If present the switchable will switch the item automatically
+         */
+        auto: {
+            type: Boolean,
+            value: false
+        },
+        /**
+         * If present the switchable item will not response to the tap or click event.
+         * Ripple and pointer cursor will not effected until unfreeze.
+         */
+        freeze: {
+            type: Boolean,
+            value: false,
+            reflectToAttribute: true,
+            observer: "_onSwitchableItemFreezed"
+        }
+    },
+
+    _activeItem: Element,
+
+    _isSwitchableMenuItem: true,
+
+    _onSwitchableItemFreezed: function(){
+    },
+
+    _onPropertyDisabledChanged: function(){
+        if (this._activeItem && this._activeItem.localName){
+            this._activeItem.disabled = this.disabled;
+        }
+    },
+
+    ready: function() {
+        this._menus = Polymer.dom(this).children;
+        if (this._menus){
+            for (let i = 0; i < this._menus.length; i++){
+                if (this._menus[i].getAttribute("selected") != null) {
+                    this._activeItem = this._menus[i];
+                    this._activeItem.disabled = this.disabled;
+                }
+            }
+            if (!this._activeItem && this._menus.length > 0){
+                this._activeItem = this._menus[0]
+            }
+        }
+    },
+
+    /**
+     * Toggle the selected item.
+     */
+    toggle: function() {
+        for (let i = 0; i < this._menus.length; i++){
+            this._menus[i].selected = !this._menus[i].selected;
+            if (this._menus[i].selected){
+                this._activeItem = this._menus[i];
+                this._activeItem.disabled = this.disabled;
+            }
+        }
+    },
+
+    /**
+     * Get current selected child id
+     */
+    getActiveItemId: function(){
+        return this._activeItem.getId();
+    },
+
+    /**
+     * Get curernt selected child title
+     */
+    getActiveItemTitle: function(){
+        return this._activeItem.getTitle();
+    },
+
+    /**
+     * Get current select child icon
+     */
+    getActiveItemIcon: function(){
+        return this._activeItem.getIcon();
+    },
+
+    /**
+     *  Get title of the switchable, it's the same as getActiveItemTitle
+     */
+    getTitle: function(){
+        return this._activeItem.getTitle();
+    },
+
+    /**
+     * Get icon of the switchable, it's the same as getActiveItemIcon
+     */
+    getIcon: function(){
+        return this._activeItem.getIcon();
+    },
+
+    /**
+     * Set item id to be selected. This manually animate switch animation between
+     * the current selected item and the new selected item.
+     */
+    setSelectedItemId: function(id) {
+        if (this._activeItem.getId() != id){
+            for (let i = 0; i < this._menus.length; i++){
+                if (this._menus[i].getId() == id){
+                    this._menus[i].selected = true;
+                    this._activeItem.selected = false;
+                    this._activeItem = this._menus[i];
+                    this._activeItem.disabled = this.disabled;
+                    return;
+                }
+            }
+            console.warn("Set selected item id ", id, "was not found.");
+        }
+    },
+
+    /**
+     * Set switchable free. If the state is true then switchable won't response to
+     * the tap or click event. Ripple and other style such as cursor pointer will be
+     * temporary disactivated and reactivated until the switchable is unfreezed.
+     */
+    setFreeze: function(state){
+        this.freeze = state;
+        this.noink = state;
+        for (let i = 0; i < this._menus.length; i++){
+            this._menus[i].noink = state;
+        }
+    }
+
+};
+
+Cmidt.OptionMenuSwitchableItemBehavior = [Cmidt.OptionMenuGenericItemBehavior, OptionMenuSwitchableItemBehaviorImpl];
+</script>

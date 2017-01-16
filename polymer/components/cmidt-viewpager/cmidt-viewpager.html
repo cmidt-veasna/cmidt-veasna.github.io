@@ -1,0 +1,1423 @@
+<link rel="import" href="../polymer/polymer.html">
+<link rel="import" href="../iron-scroll-target-behavior/iron-scroll-target-behavior.html">
+<link rel="import" href="../iron-scroll-threshold/iron-scroll-threshold.html">
+<link rel="import" href="../iron-icon/iron-icon.html">
+<link rel="import" href="../iron-flex-layout/iron-flex-layout.html">
+<link rel="import" href="../iron-resizable-behavior/iron-resizable-behavior.html">
+<link rel="import" href="../iron-selector/iron-selector.html">
+<link rel="import" href="../paper-icon-button/paper-icon-button.html">
+
+<link rel="import" href="cmidt-viewpager-icons.html">
+<!--
+The `cmidt-viewpager` is custom element, implement high Performance unlimit horizontal
+page scroll like Android View Pager.
+
+Example:
+
+    <cmidt-viewpager id="pager" items="[[array]]">
+        <template>
+            <div>....</div>
+        </template>
+    </cmidt-viewpager>
+
+ViewPager required explicit size, width and height, it could be value of explicit pixel or 100%.
+
+By default, ViewPager will adapted to the browser of the plaform, if the browser are running on the none touch device
+such laptop or desktop, user can use mouse wheel to scroll and change the page if the OS support mouse wheel.
+Computer like Macbook is working smoothly with mouse wheel. If the browser are running on device support touch event,
+user can touch and move to change the page, however if the device support both feature then user can interact with both event.
+
+<b>Note:</b> the mouse wheel feature may not work properly on Firefox browser as there is a small requirement to implement on
+Javascript code for performance reason,
+See https://developer.mozilla.org/en-US/docs/Mozilla/Performance/Scroll-linked_effects. ViewPager rely on `iron-scroll-target-behavior`
+to perfrom scrolling on the container of the each page and the feature might need to be implemented in the behavior instead of ViewPager
+
+### Styling
+
+The following custom properties and mixins are available for styling:
+
+Custom property | Description | Default
+----------------|-------------|----------
+`--cmidt-page`| Mixin style applied to the page | `{}`
+`--cmidt-page-margin`| Margin or space between page, it include as padding | `0px`
+`--cmidt-page-indicator`| Mixin style applied to indicator container, iron-selector. It can be use to specify the location of the indicator | `{}`
+`--cmidt-page-indicator-space`| Space between dot indicator | `4px`
+`--cmidt-page-indicator-size`| The normal size of the dot indicator | `10px`
+`--cmidt-page-indicator-selected-size`| The selected size of the dot indicator | `18px`
+`--cmidt-page-indicator-color`| The normal dot indicator color | `black`
+`--cmidt-page-indicator-selected-color`| The color of dot indicator when it selected |#857376
+`--cmidt-page-control`| Mixin style applied to control button | `{}`
+`--cmidt-page-control-next`| Mixin style applied directed to next control button | `{}`
+`--cmidt-page-control-previous`| Mixin style applied directed to previous control button | `{}`
+`--cmidt-control-size`| The size of control button next or previous | `60px`
+`--cmidt-control-color`| The color of control arrow button | `white`
+`--cmidt-control-background`| The color circle background of control button | `rgba(0, 0, 0, 0.08)`
+`--cmidt-control-hover-background`| The color circle background of control button when hover | `rgba(0, 0, 0, 0.5)`
+
+
+@demo demo/index.html
+-->
+
+<dom-module id="cmidt-viewpager">
+    <template>
+    <style>
+    :host {
+        display: block;
+        overflow: hidden;
+        position: relative;
+
+        --iron-item-space: var(--cmidt-page-indicator-space, 4px);
+
+        --iron-normal-size: var(--cmidt-page-indicator-size, 10px);
+        --iron-selected-size: var(--cmidt-page-indicator-selected-size, 18px);
+
+        --iron-padding-size: calc((var(--iron-item-space) / 2) + ((var(--iron-selected-size) - var(--iron-normal-size)) / 2));
+        --iron-padding-selected-size: var(--iron-item-space);
+
+        --iron-item-control-size: var(--cmidt-control-size, 60px);
+    }
+
+    iron-scroll-threshold {
+        width: 100%;
+        height: 100%;
+    }
+
+    #container {
+        position: relative;
+        overflow-x: scroll;
+        overflow-y: hidden;
+        -ms-overflow-style: none;
+        height: calc(100% + 16px);
+        padding-bottom: 16px;
+        box-sizing: border-box;
+    }
+
+    #container::-webkit-scrollbar {
+        display: none;
+    }
+
+    #container > ::content > * {
+        margin: 0;
+        box-sizing: border-box;
+        will-change: transform;
+        padding-left: var(--cmidt-page-margin, 0px);
+        padding-right: var(--cmidt-page-margin, 0px);
+        @apply(--layout-fit);
+        @apply(--cmidt-page);
+    }
+
+    #container > ::content > .be-animated {
+        -webkit-transition: opacity 180ms, -webkit-transform 320ms; /* Safari */
+        transition: opacity 180ms, transform 320ms;
+    }
+
+    #container > ::content > .be-animated-opacity {
+        -webkit-transition: opacity 420ms; /* Safari */
+        transition: opacity 420ms;
+    }
+
+    :host[auto-padding] #container > ::content > * {
+        padding-left: calc(8px + var(--iron-item-control-size));
+        padding-right: calc(8px + var(--iron-item-control-size));
+    }
+
+    #clipping {
+        box-sizing: border-box;
+        width: 100%;
+        height: 100%;
+    }
+
+    :host[clip-padding] #clipping {
+        width: calc(100% - 16px - (2 * var(--iron-item-control-size)));
+        margin-left: calc(8px + var(--iron-item-control-size));
+    }
+
+    /* Indicator style */
+    #indicator {
+        color: var(--cmidt-page-indicator-color, black);
+        left: 50%;
+        bottom: 0;
+        transform: translate(-50%, 0);
+        @apply(--layout-horizontal);
+        @apply(--layout-center-center);
+        @apply(--cmidt-page-indicator);
+        position: absolute;
+    }
+
+    .indicator-item {
+        width: var(--iron-selected-size);
+        height: var(--iron-selected-size);
+        padding: var(--iron-padding-size);
+        @apply(--layout-horizontal);
+        @apply(--layout-center-center);
+        position: relative;
+        box-sizing:border-box;
+        cursor: pointer;
+        transition: padding 80ms ease-in-out;
+    }
+
+    .indicator-item.iron-selected {
+        padding: var(--iron-padding-selected-size);
+        color: var(--cmidt-page-indicator-selected-color, #857376);
+    }
+
+    .indicator-item iron-icon {
+        width: 100%;
+        height: 100%;
+    }
+
+    /* Controller */
+    .control {
+        top: 50%;
+        transform: translate(0, -50%);
+        position: absolute;
+        cursor: pointer;
+        padding: 10px;
+        color: var(--cmidt-control-color, white);
+        width: var(--iron-item-control-size);
+        height: var(--iron-item-control-size);
+        -moz-border-radius: var(--iron-item-control-size);
+        -webkit-border-radius: var(--iron-item-control-size);
+        border-radius: var(--iron-item-control-size);
+        background-color: var(--cmidt-control-background, rgba(0, 0, 0, 0.08));
+        transition: background-color 0.5s linear, visibility 0.5s linear;
+        @apply(--cmidt-page-control);
+    }
+
+    #next {
+        right: 0;
+        @apply(--cmidt-page-control-next);
+    }
+
+    #previous {
+        left: 0;
+        @apply(--cmidt-page-control-previous);
+    }
+
+    .control:hover {
+        background-color: var(--cmidt-control-hover-background, rgba(0, 0, 0, 0.5));
+    }
+
+    .control.hide {
+        visibility: hidden;
+    }
+    </style>
+
+    <div id="clipping">
+        <iron-scroll-threshold id="threshold" horizontal>
+            <div id="container">
+                <content></content>
+            </div>
+        </iron-scroll-threshold>
+    </div>
+
+    <!-- control -->
+    <paper-icon-button id="previous" class="control" on-click="_onPreviousClick" icon="cmidt-viewpager:arrow-previous" hidden$="[[hide-control]]"></paper-icon-button>
+    <paper-icon-button id="next" class="control" on-click="_onNextClick" icon="cmidt-viewpager:arrow-next" hidden$="[[hide-control]]"></paper-icon-button>
+    <!-- indicator -->
+    <iron-selector id="indicator" selected="{{_currentItemInternal}}" hidden$="[[hide-indicator]]">
+        <template is="dom-repeat" items="[[_indicatorItem]]">
+            <div class="indicator-item">
+                <iron-icon icon="cmidt-viewpager:disc"></iron-icon>
+            </div>
+        </template>
+    </iron-selector>
+</template>
+
+<script>
+
+var Cmidt = Cmidt || {};
+
+// fire when animation is done and page are in place
+Cmidt.PAGE_STATE_IDLE = 0;
+// fire when user start dragging the page
+Cmidt.PAGE_STATE_DRAGGED = 1;
+// fire when user scroll the page most likely using mouse wheel
+Cmidt.PAGE_STATE_SCROLLING = 2;
+// fire before animation start to move page into a proper position
+Cmidt.PAGE_STATE_SETTLING = 3;
+
+(function() {
+    var WHEEL_WAIT_DONE = 180;
+    var ANIMETION_SPEED_MULTIPLIER = 2.5;
+
+
+    Polymer({
+
+        /**
+         * Fire when new page is moving to the visible region and the old visible page
+         * push outside of visible region. This fire when user release the finger or scrolling
+         * being settle and before the animation start. Note that `page-selected` also fire if
+         * user tap or click on such as control button (next, previous) or the dot indicator.
+         * The method `setCurrentItem` is also fire the `page-selected` if `skipSelected` not specify.
+         *
+         * @event page-selected
+         */
+
+         /**
+          * Fire when a page is detached from ViewPAger container and place under reusable list pool for later use.
+          * Event is attached an attach item with `event.detail`<br>
+          *
+          * 1. event.detail.item.position represent position of item related to item containr object array.<br>
+          * 2. event.detail.item.object represent HTML element which is attached to ViewPager container<br>
+          *
+          * @event page-detached
+          */
+
+          /**
+           * Fire when a page is added to ViewPager container.
+           * Event is attached an attach item with `event.detail`
+           *
+           * 1. event.detail.item.position represent position of item related to item containr object array.<br>
+           * 2. event.detail.item.object represent HTML element which is attached to ViewPager container<br>
+           * 3. event.detail.reusable represent state of HTML element. If true, the item is takeing from reusable pool otherwise it was new item.
+           *
+           * @event page-attached
+           */
+
+         /**
+          * Fire multiple time with different state such idle, dragged, scrolling or settling.
+          * Variable: `Cmidt.PAGE_STATE_IDLE`, `Cmidt.PAGE_STATE_DRAGGED`, `Cmidt.PAGE_STATE_SCROLLING`
+          * and `Cmidt.PAGE_STATE_SETTLING` can be use to check the state of the event.
+          *
+          * 1.`Cmidt.PAGE_STATE_IDLE` fire immediately after animation is done and page are in the exact position x or completely visible.<br>
+          * 2.`Cmidt.PAGE_STATE_DRAGGED` fire only one time right after user touch and drag the page to left or right.<br>
+          * 3.`Cmidt.PAGE_STATE_SCROLLING` fire only one time when user move the page by mouse wheel.<br>
+          * 4.`Cmidt.PAGE_STATE_SETTLING` fire immediately after user stop interaction such as release the finger or stop the wheel and right before animation start to settle the page coordination.
+          *
+          * @event page-state-changed
+          */
+
+        /**
+         * Fire when the scroll read at the last page of ViewPager. This event allow the host
+         * applications to listen and perform lazy load content to append into ViewPager
+         *
+         * @event on-lower-threshold
+         */
+
+        is: 'cmidt-viewpager',
+
+        behaviors: [
+            Polymer.IronScrollTargetBehavior,
+            Polymer.Templatizer,
+            Polymer.IronResizableBehavior
+        ],
+
+        properties: {
+            /**
+             * An array containing items determining how many instances of the template as the page
+             * to stamp and each template instance should bind to.
+             */
+            items: {
+                type: Array
+            },
+            /**
+             * The name of the variable to add to the binding scope for the array
+             * element associated with a given template instance.
+             */
+            as: {
+                type: String,
+                value: 'item'
+            },
+            /**
+             * The name of the variable to add to the binding scope with the index
+             * for the row.
+             */
+            indexAs: {
+                type: String,
+                value: 'index'
+            },
+            /**
+             * The number of invisible page on the left and the right side.
+             */
+            pageOffset: {
+                type: Number,
+                value: 1
+            },
+            /**
+             * Not implement at the moment.
+             */
+            bounce: {
+                type: Boolean,
+                value: false
+            },
+            /**
+             * By default, build in indicator is display at the bottom of ViewPager.
+             * Specify this attribute will hide the indicator.
+             *
+             * ```html
+             * <cmidt-viewpager hide-indicator>
+             * </cmidt-viewpager>
+             * ```
+             */
+            hideIndicator: {
+                type: Boolean,
+                value: false,
+                reflectToAttribute: true,
+            },
+            /**
+             * By default, build in control button is display at the left and right of ViewPager.
+             * Specify this attribute will hide the control button.
+             *
+             * ```html
+             * <cmidt-viewpager hide-control>
+             * </cmidt-viewpager>
+             * ```
+             */
+            hideControl: {
+                type: Boolean,
+                value: false,
+                reflectToAttribute: true,
+            },
+            /**
+             * The current selected item or index, base on attribute items.
+             * Note that to set the current item or index. Please use method setCurrentItem instead.
+             * Change this value will not cause the page to change it only fire the event `on-page-selected`
+             */
+            currentItem: {
+                type: Number,
+                value: 0,
+                reflectToAttribute: true,
+            },
+            /**
+             * By default, the control button will display overlap on top of the page.
+             * Auto padding will set the padding left and right to the page to reserve the space
+             * for the control next and previous button. Also you can custom style variable such as
+             * `--cmidt-page` or `--cmidt-page-margin` to make space for control button as well.
+             * However the page still scroll behind the control button. To make page clip and not
+             * scroll behind the control button, please use clip-padding instead.
+             *
+             * ```html
+             * <cmidt-viewpager auto-padding>
+             * </cmidt-viewpager>
+             * ```
+             */
+            autoPadding: {
+                type: Boolean,
+                value: false,
+                reflectToAttribute: true,
+            },
+            /**
+             * Clip Padding will clip the page to the available space between control button next and previous.
+             * The page will not scroll behind button control and the content will clip at the edge left and right.
+             * This must not be use together with auto-padding.
+             *
+             * ```html
+             * <cmidt-viewpager clip-padding>
+             * </cmidt-viewpager>
+             * ```
+             */
+            clipPadding: {
+                type: Boolean,
+                value: false,
+                reflectToAttribute: true
+            },
+            /**
+             * State represent whether or not ViewPager should fire event such on detached or attached and other event.
+             */
+            enableExtraEvent: {
+                type: Boolean,
+                value: false,
+                reflectToAttribute: true
+            },
+            /**
+             * The current internal selected item. Use to bind value between iron-selector and view pager.
+             */
+            _currentItemInternal: {
+                type: Number,
+                value: 0
+            },
+            /**
+             * The binding object for indicator.
+             */
+            _indicatorItem: {
+                type: Array
+            }
+        },
+
+        /**
+         * ViewPager height
+         */
+        _viewportHeight: 0,
+
+        /**
+         * ViewPager width
+         */
+        _viewportWidth: 0,
+
+        /**
+         * Total scrollable width
+         */
+        _scrollableWidth: 0,
+
+        /**
+         * Current scroll left position
+         */
+        _scrollPosition: 0,
+
+        /**
+         * Current scrolling direction
+         */
+        _scrollDirection: 0,
+
+        /**
+         * Touch drag start scroll left position. Use to track left scroll while tracking
+         */
+        _touchDragScrollPosition: 0,
+
+        /**
+         * A maximum offset of scroll movement to determin new page need to populate into container
+         */
+        _populateOffset: 0,
+
+        /**
+         * A state to determin if ViewPager currently populated the items
+         */
+        _isPopulating: false,
+
+        /**
+         * A minimum distance of scroll movement to determin final scroll left position before animated.
+         */
+        _nextPositionOffset: 0,
+
+        /**
+         * A ViewPager state, See Cmidt.PAGE_STATE_IDLE, Cmidt.PAGE_STATE_DRAGGED ...etc
+         */
+        _state: 0,
+
+        /**
+         * A list of current attached element into container. Represent in the form:
+         *
+         * {
+         *      position:   // position of item related to real position in array items containing object
+         *      object:     // HTML element that attached to container
+         *      scrolling:  // true/false determin if the item is current scrolling
+         *      template:   // true/false determin if the item was create from template or manually from content
+         * }
+         *
+         */
+        _attachedItems: null,
+
+        /**
+         * A list of current detached element from container. Represent in the object the same as _attachedItems above.
+         * This used to store detached element so that it can be re-use to bind with other containing object and re-attached
+         * back to the container.
+         */
+        _reusableItems: null,
+
+        /**
+         * Size of dot indicator
+         */
+        _indicatorSize: 0,
+
+        /**
+         * State to determin whether or not user is current interact with pager by touch
+         */
+        _isTouched: false,
+
+        /**
+         * State used to detect transition css transition of child when removed. To prevent any action
+         * to change the page. It's represent in form of object
+         */
+        _removeTransitions: null,
+
+        /**
+         * State to determin if page current scrolling to take place
+         */
+        _isAnimated: false,
+
+        /**
+         * A long number to track the async schedule for mouse wheel scrolling finish
+         */
+        _scrollFinishedHandler: null,
+
+        /**
+         * A state to indicate that the wheel should be cancel and no long need.
+         * TODO: when implement bounce this will be useful
+         */
+        _shouldStopWheelPropagation: false,
+
+        /**
+         * A long number ot track the async schedule for animation loop. Use to finish or cancel if user
+         * interact with ViewPager while animation is going on
+         */
+        _animationFrameRequestID: null,
+
+        /**
+         * State to determin if we should take track event to move page when user touch and move. Normally
+         * It's always true except when user move vertically as the page content might overflow and need to
+         * be scroll up/down.
+         */
+        _isBeingDragged: true,
+
+        /**
+         * A float number use to track the total distance of track move by the user
+         */
+        _lastDelta: 0,
+
+        /**
+         * A start use to track user start moving page. Use to determin velocity
+         */
+        _startTrackTime: 0,
+
+        /**
+         * A state to check whether a scrolling from mouse wheel is fired. The event will fire immediately after scroll start
+         * as we need to make sure that user scroll horizontally and not vertical
+         */
+        _hasFireScrolling: false,
+
+        /**
+         * A state to determin whether should fire page selection event when a current position of the item change
+         */
+        _shouldFireSelectedEvent: false,
+
+        /**
+         * This use to determin whether template has provided. (Should remove this and use this.ctor instead.)
+         */
+        _hasTemplate: false,
+
+        observers: [
+            '_onItemsChanged(items.*)',
+            '_onCurrentItemChanged(currentItem)',
+            '_onCurrentItemInternalChanged(_currentItemInternal)',
+            '_onHideControlChanged(hideControl)',
+            '_onHideIndicatorChanged(hideIndicator)'
+        ],
+
+        listeners: {
+            'touchmove': '_onTouchMove',
+            'touchstart': '_onTouchStart',
+            'touchend': '_onTouchEnd',
+            // 'wheel': '_onMouseWheel',
+            // track will be toggle when touch start or touch end to avoid click move on desktop browser
+            // 'track': '_onTrack',
+            'down': '_onDown',
+            'up': '_onUp',
+            'transitionend': '_onCssTransitionEnd',
+            'iron-resize': '_onResizeHandler'
+        },
+
+        ready: function() {
+            this.scrollTarget = this.$.container;
+            this.$.threshold.scrollTarget = this.$.container;
+        },
+
+        attached: function() {
+            this.updateViewportBoundaries();
+            if(this.items && this.items.length > 0) {
+                this._populate();
+                this._populateIndicator();
+            } else if (this.$.container.children.length > 0) {
+                var child = this.$.container.children;
+                this._indicatorItem = [];
+                this._attachedItems = this._attachedItems || [];
+                for(var i = 0; i < child.length; i++) {
+                    if (child[i].localName != "template") {
+                        var item = {};
+                        item.position = i;
+                        item.object = child[i];
+                        item.scrolling = false;
+                        item.template = false;
+                        this._attachedItems.push(item);
+                        this.push('_indicatorItem', i);
+                        this.translate3d((i * this._viewportWidth) + 'px', 0, 0, item.object);
+                    }
+                }
+            }
+        },
+
+        _forwardInstanceProp: function(inst, prop, value){
+            // TODO: custom forward
+        },
+
+        _forwardInstancePath: function(inst, path, value) {
+            // TODO: custom forward
+        },
+
+        _forwardParentProp: function(prop, value) {
+            // TODO: what we do here
+        },
+
+        _forwardParentPath: function(path, value) {
+            // TODO: impelement path forward
+        },
+
+        /**
+        * Called as a side effect of a host items.<key>.<path> path change,
+        * responsible for notifying item.<path> changes.
+        */
+        _forwardItemPath: function(path, value) {
+            var dot = path.indexOf('.');
+            var key = path.substring(1, dot < 0 ? path.length : dot);
+            var item = null;
+            for (var i = 0; i < this._attachedItems.length; i++) {
+                if (this._attachedItems[i].position == key) {
+                    item = this._attachedItems[i];
+                    break;
+                }
+            }
+            // no item visible found ignore. the reusable binding will take the change later on
+            if (!item){
+                return;
+            }
+            if (dot >= 0) {
+                path = this.as + '.' + path.substring(dot+1);
+                item.object._templateInstance.notifyPath(path, value, true);
+            } else {
+                item.object._templateInstance[this.as] = value;
+            }
+        },
+
+        get _isVisible() {
+            return Boolean(this.offsetWidth || this.offsetHeight);
+        },
+
+        _onItemsChanged: function(change) {
+            this.updateViewportBoundaries();
+            if (change.path === 'items') {
+                this._physicalIndexForKey = {};
+                this._attachedItems = this._attachedItems || [];
+                this._reusableItems = this._reusableItems || [];
+                if (this._viewportWidth != 0 && this._viewportHeight != 0){
+                    // this mean a complete change to the entire items containing object.
+                    // reset scroll, current item and rebind
+                    if (this.currentItem != 0){
+                        this.currentItem = 0;
+                        this._currentItemInternal = 0;
+                    } else {
+                        // explicitly fire page-selected as the currentItem is 0 no change is being trigger.
+                        // fire this so that the host can use to change accordingly such as custom indicator ...etc
+                        this._onCurrentItemChanged();
+                    }
+
+                    if (this._scrollLeft != 0){
+                        // 0, animate = false, fireState = true
+                        this._scrollPageTo(0, false, false);
+                    }
+
+                    //
+                    this._populate(true);
+                    this._populateIndicator();
+                    this.toggleClass('hide', this.currentItem == 0, this.$.previous);
+                    this.toggleClass('hide', this.currentItem == this.items.length - 1, this.$.next);
+                }
+            } else if (change.path === 'items.splices') {
+                if (this._viewportWidth != 0 && this._viewportHeight != 0){
+                    var changeInfo = change.value.indexSplices[0];
+                    var rePopulate = false;
+                    if (changeInfo.removed && changeInfo.removed.length > 0){
+                        if (this._needRemoveAnimation(changeInfo)){
+                            // remove animation take place first
+                            return;
+                        } else if (changeInfo.index < this.currentItem) {
+                            this._setCurrentItemInternal(this.currentItem - changeInfo.removed.length, true, true);
+                            this._invalideAttachedContent();
+                            rePopulate = true;
+                        } else if ((this.currentItem + this.pageOffset) <= changeInfo.index) {
+                            rePopulate = true;
+                        }
+                    } else if (changeInfo.addedCount > 0) {
+                        if (this._needAddAnimation(changeInfo)) {
+                            // make space animation take place first
+                            return;
+                        } else if (changeInfo.index <= (this.currentItem + this.pageOffset)) {
+                            if (changeInfo.index < this.currentItem){
+                                this._setCurrentItemInternal(this.currentItem + changeInfo.addedCount, true, true);
+                                this._invalideAttachedContent();
+                            }
+                            rePopulate = true;
+                        }
+                    }
+                    this._rePopulateItemOnSplice(rePopulate, !rePopulate);
+                }
+            } else {
+                this._forwardItemPath(change.path.split('.').slice(1).join('.'), change.value);
+            }
+        },
+
+        _needRemoveAnimation: function(changeInfo) {
+            if (this.items.length == 0) {
+                // no need to compute any more. all item is remove.
+                var index = this._getVisibleAttachedItem();
+                if (index != -1) {
+                    var item = this._attachedItems[index];
+                    this.toggleClass('be-animated', true, item.object);
+                    item.object.style.opacity = 0;
+                    this.translate3d((this.currentItem * this._viewportWidth)+'px', this._viewportHeight+'px', 0, item.object);
+                }
+                this._removeTransitions = {
+                    // assign moveIn as fake pointing to item as no more item and transition end required moveIn to process forward.
+                    moveIn: item,
+                    moveOut: item,
+                    removedSize: changeInfo.removed.length
+                };
+                return true;
+            }
+
+            if (changeInfo.index == this.currentItem ||
+                (this.currentItem < changeInfo.index + changeInfo.removed.length)) {
+                var index = this._getVisibleAttachedItem();
+                if (index != -1) {
+                    var inItem;
+                    var fromRight;
+                    var item = this._attachedItems[index];
+                    if (changeInfo.index >= this.items.length) {
+                        // we reach the right side. we should animate item in from the left side.
+                        fromRight = false;
+                        inItem = this._attachedItems[index-1];
+                    } else {
+                        fromRight = true;
+                        inItem = this._attachedItems[index+1];
+                    }
+
+                    // populate item in before animate
+                    var rebindIndex;
+                    if (fromRight) {
+                        rebindIndex = changeInfo.index;
+                        this._rebindReusableItem(inItem, inItem.object._templateInstance, changeInfo.index);
+                    } else {
+                        rebindIndex = changeInfo.index - 1;
+                        this._rebindReusableItem(inItem, inItem.object._templateInstance, rebindIndex);
+                    }
+
+                    this.toggleClass('be-animated', true, item.object);
+                    this.toggleClass('be-animated', true, inItem.object);
+
+                    item.object.style.opacity = 0;
+                    this.translate3d((this.currentItem * this._viewportWidth)+'px', this._viewportHeight+'px', 0, item.object);
+                    this.translate3d((this.currentItem * this._viewportWidth)+'px', 0, 0, inItem.object);
+
+                    this._removeTransitions = {
+                        moveIn: inItem,
+                        moveOut: item,
+                        rebindIndex: rebindIndex,
+                        removedSize: changeInfo.removed.length
+                    };
+                }
+                return true;
+            }
+            return false;
+        },
+
+        _needAddAnimation: function(changeInfo) {
+            if (this.currentItem == changeInfo.index) {
+                var index = this._getVisibleAttachedItem();
+                if (index == -1 && this._attachedItems.length == 0) {
+                    this._addNewItem(0, -1);
+                    index = 0;
+                }
+                var item = this._attachedItems[index];
+                var inItem = index == this._attachedItems.length - 1 ? this._attachedItems[index - 1] : this._attachedItems[index + 1];
+
+                if (!inItem && this.items.length == 2 && this._attachedItems.length == 1) {
+                    // no spare item for animation
+                    this._addNewItem(this.currentItem + 1, -1);
+                    inItem = this._attachedItems[1];
+                } else if (this.items.length == 1) {
+                    inItem = item;
+                }
+
+                this._rebindReusableItem(inItem, inItem.object._templateInstance, this.currentItem);
+
+                inItem.object.style.opacity = 0;
+                this.translate3d((this.currentItem * this._viewportWidth)+'px', 0, 0, inItem.object);
+
+                if (inItem != item) {
+                    this.toggleClass('be-animated', true, item.object);
+                    this.translate3d(((this.currentItem + 1) * this._viewportWidth)+'px', 0, 0, item.object);
+                }
+
+                this.async(function(){
+                    this.toggleClass('be-animated-opacity', true, inItem.object);
+                    inItem.object.style.opacity = 1;
+                }, 120);
+
+                this._removeTransitions = {
+                    moveIn: inItem,
+                    moveOut: item,
+                    rebindIndex: this.currentItem,
+                    addedSize: changeInfo.addedCount
+                };
+                return true;
+            }
+            return false;
+        },
+
+        _rePopulateItemOnSplice: function(rebind, onlyIndicator) {
+            if (!onlyIndicator) {
+                // scroll should not have animation but should fire selection change
+                this._populate(rebind);
+                // explicitly fire page-selected as the currentItem has no change and observer will not fire.
+                // fire this so that the host can use to change accordingly such as custom indicator ...etc
+                // TODO: need it ? not sure as we change index early before re-populate so observer should has been fired
+                this._onCurrentItemChanged();
+            }
+            this._populateIndicator();
+            this.toggleClass('hide', this.currentItem == 0, this.$.previous);
+            this.toggleClass('hide', this.currentItem == this.items.length - 1, this.$.next);
+        },
+
+        _invalideAttachedContent: function() {
+            var item;
+            for (var i = 0; i < this._attachedItems.length; i++) {
+                item = this._attachedItems[i];
+                item.position = -1;
+            }
+        },
+
+        _getVisibleAttachedItem: function() {
+            for (var i = 0; i < this._attachedItems.length; i++) {
+                if (this._attachedItems[i].position == this.currentItem) {
+                    return i;
+                }
+            }
+            return -1;
+        },
+
+        _onCurrentItemChanged: function(change) {
+            if (this._shouldFireSelectedEvent) {
+                this.fire('page-selected', {position: this.currentItem});
+            }
+            // setCurrentItem can avoid callback but not for other
+            this._shouldFireSelectedEvent = true;
+        },
+
+        _onCurrentItemInternalChanged: function(change) {
+            if (this._currentItemInternal != this.currentItem){
+                this._setCurrentItemInternal(this._currentItemInternal);
+            }
+        },
+
+        _onHideControlChanged: function(){
+            this.$.next.hidden = this.hideControl;
+            this.$.previous.hidden = this.hideControl;
+        },
+
+        _onHideIndicatorChanged: function() {
+            this.$.indicator.hidden = this.hideIndicator;
+        },
+
+        _ensureTemplatized: function() {
+            if (!this.ctor) {
+                // According to https://www.polymer-project.org/1.0/docs/api/Polymer.Templatizer
+                // custom forward required _instanceProps
+                var props = {};
+                props[this.as] = true;
+                props[this.indexAs] = true;
+                this._instanceProps = props;
+
+                this._userTemplate = Polymer.dom(this).querySelector('template');
+                if (this._userTemplate) {
+                    this.templatize(this._userTemplate);
+                    this._hasTemplate = true;
+                } else {
+                    console.warn('cmidt-viewpager requires a template to be provided in light-dom');
+                    return false;
+                }
+            }
+            return true;
+        },
+
+        _onPreviousClick: function() {
+            this._setCurrentItemInternal(this.currentItem - 1);
+        },
+
+        _onNextClick: function() {
+            this._setCurrentItemInternal(this.currentItem + 1);
+        },
+
+        _onTouchMove: function(event) {
+            if (this._isBeingDragged) {
+                event.preventDefault();
+            }
+        },
+
+        _onTouchStart: function(event) {
+            this._isBeingDragged = true;
+            this.listen(this, 'track', '_onTrack');
+            this.$.container.style['overflow-x'] = 'hidden';
+        },
+
+        _onTouchEnd: function(event) {
+            this.unlisten(this, 'track', '_onTrack');
+            this.$.container.style['overflow-x'] = 'scroll';
+        },
+
+        _onTrack: function(event) {
+            if (this._removeTransitions) {
+                return;
+            }
+            switch(event.detail.state) {
+                case 'start':
+                    this._startTrackTime = Date.now();
+                    this._touchDragScrollPosition = this._scrollLeft;
+                    break;
+                case 'track':
+                    if (this._isBeingDragged && this._isTrackUnderViewPager(event.detail.hover())) {
+                        var dx = Math.abs(event.detail.dx);
+                        var dy = Math.abs(event.detail.dy);
+                        if (dy > 20 && dy > dx) {
+                            this._isBeingDragged = false;
+                            this.unlisten(this, 'track', '_onTrack');
+                            return
+                        }
+                        if (!this._hasBeenFireDragged) {
+                            this._hasBeenFireDragged = true;
+                            this.fire('page-state-changed', {state: Cmidt.PAGE_STATE_DRAGGED});
+                            this._state = Cmidt.PAGE_STATE_DRAGGED;
+                        }
+                        this._lastDelta = event.detail.dx;
+                        this._move(this._lastDelta);
+                        event.stopPropagation();
+                        event.preventDefault();
+                    }
+                    break;
+                case 'end':
+                    if (this._isBeingDragged) {
+                        var deltaTime = Date.now() - this._startTrackTime;
+                        var velocity = this._lastDelta / deltaTime;
+                        this._settleViewPosition(velocity);
+                    }
+                    this._hasBeenFireDragged = null;
+                    this._isBeingDragged = true;
+                    this._touchDragScrollPosition = 0;
+                    break;
+            }
+        },
+
+        _onDown: function(event) {
+            var localName = event.target.localName;
+            if (localName != 'paper-icon-button' && localName != 'iron-icon'){
+                this._isTouched = true;
+                this._cancelAnimationFrame();
+            }
+        },
+
+        _onUp: function(event) {
+            var localName = event.target.localName;
+            if (localName != 'paper-icon-button' && localName != 'iron-icon'){
+                this._onScrollFinished();
+                this._isTouched = false;
+                this._hasBeenFireDragged = null;
+                this._isBeingDragged = true;
+                this._touchDragScrollPosition = 0;
+            }
+        },
+
+        _onCssTransitionEnd: function(event) {
+            if (this._removeTransitions && event.target == this._removeTransitions.moveIn.object) {
+                if (event.propertyName == "transform") {
+                    if (this.items.length == 0) {
+                       this._rePopulateItemOnSplice(false);
+                   } else {
+                        // transition animation is done.
+                        var moveIn = this._removeTransitions.moveIn;
+                        var moveOut = this._removeTransitions.moveOut;
+                        var rebindIndex = this._removeTransitions.rebindIndex;
+                        var removedSize = this._removeTransitions.removedSize;
+
+                        this._rebindReusableItem(moveOut, moveOut.object._templateInstance, rebindIndex);
+                        this.toggleClass('be-animated', false, moveIn.object);
+                        this.toggleClass('be-animated', false, moveOut.object);
+                        moveOut.object.style.opacity = 1;
+
+                        this._removeTransitions = null;
+                        //if (this.currentItem >= this.items.length){
+                            this._invalideAttachedContent();
+                            this._setCurrentItemInternal(rebindIndex, true, true);
+                        //}
+                        this._rePopulateItemOnSplice(true);
+                    }
+                } else if (event.propertyName == "opacity") {
+                    // transition animation is done.
+                    var moveIn = this._removeTransitions.moveIn;
+                    var moveOut = this._removeTransitions.moveOut;
+                    var rebindIndex = this._removeTransitions.rebindIndex;
+                    var addedSize = this._removeTransitions.addedSize;
+
+                    this._invalideAttachedContent();
+
+                    this._rebindReusableItem(moveOut, moveOut.object._templateInstance, rebindIndex);
+                    this.toggleClass('be-animated-opacity', false, moveIn.object);
+                    this.toggleClass('be-animated', false, moveOut.object);
+                    this._removeTransitions = null;
+                    this._rePopulateItemOnSplice(false);
+                }
+            }
+        },
+
+        _onResizeHandler: function(event) {
+            this.updateViewportBoundaries();
+            // prevent the translate3d going on when viewport is 0 this happen in certain
+            // case such as iron-page selector where when page is hidding which cause ViewPager size to 0
+            // and it trigger resize callback which cause strange behavior on to ViewPager scroll.
+            if (this._attachedItems && this._viewportWidth > 0){
+                // re-calculate scroll left as width might changed.
+                // animation and fire state are muted as not changed to state or position.
+                // TODO: ? we might fire resize instead so that host can update the page accordingly ?
+                var item;
+                for (var i = 0; i < this._attachedItems.length; i++){
+                    item = this._attachedItems[i];
+                    this.translate3d((item.position * this._viewportWidth)+'px', 0, 0, item.object);
+                }
+                this._setCurrentItemInternal(this.currentItem, true, true);
+            }
+        },
+
+        _onAnimationFinish: function() {
+            this.fire('page-state-changed', {state: Cmidt.PAGE_STATE_IDLE});
+            this._state = Cmidt.PAGE_STATE_IDLE;
+        },
+
+        _scrollHandler: function() {
+            var scrollLeft = Math.max(0, Math.min(this._scrollableWidth, this._scrollLeft))
+            var distanceProgress = Math.abs(scrollLeft / this._viewportWidth);
+            // if populating is going on then we shouldn't make another call to populate the item.
+            // populate item cause scroll event change as well
+            if (!this._isPopulating && this._hasTemplate && distanceProgress > this._populateOffset) {
+                // add new item if needed
+                var delta = scrollLeft - this._scrollPosition;
+                var pageIndex = parseInt(scrollLeft / this._viewportWidth);
+                var nextPage = (delta < 0 || scrollLeft % this._viewportWidth == 0) ? pageIndex : pageIndex + 1;
+                if (this._nextPage != nextPage){
+                    this._nextPage = nextPage;
+                    this._populateWith(nextPage);
+                }
+            }
+
+            this._scrollDirection = scrollLeft - this._scrollPosition;
+            this._scrollPosition = scrollLeft;
+
+            if (this._scrollPosition < this._viewportWidth) {
+                // no more page from the left
+                this.toggleClass('hide', true, this.$.previous);
+                this.toggleClass('hide', false, this.$.next);
+            } else if (this._scrollPosition > (this._scrollableWidth - this._viewportWidth)) {
+                this.toggleClass('hide', false, this.$.previous);
+                this.toggleClass('hide', true, this.$.next);
+            } else {
+                this.toggleClass('hide', false, this.$.previous);
+                this.toggleClass('hide', false, this.$.next);
+            }
+            // do not do anything if touch or currently animating
+            if (!this._isTouched && !this._isAnimated) {
+                if (this._scrollFinishedHandler){
+                    this.cancelAsync(this._scrollFinishedHandler);
+                }
+                this._scrollFinishedHandler = this.async(this._onScrollFinished, WHEEL_WAIT_DONE);
+            }
+            if (!this._isTouched && !this._hasFireScrolling) {
+                this._hasFireScrolling = true;
+                this.fire('page-state-changed', {state: Cmidt.PAGE_STATE_SCROLLING});
+                this._state = Cmidt.PAGE_STATE_SCROLLING;
+            }
+        },
+
+        _onScrollFinished: function() {
+            var scrollLeft = Math.max(0, Math.min(this._scrollableWidth, this._scrollLeft));
+            var moveDistance = scrollLeft % this._viewportWidth;
+            var currentPage = parseInt(scrollLeft / this._viewportWidth);
+            var nextPage = (moveDistance > this._nextPositionOffset && this._scrollDirection  > 0) ? currentPage + 1 : currentPage;
+            this._setCurrentItemInternal(nextPage);
+            this._hasFireScrolling = false;
+        },
+
+        _settleViewPosition: function(velocity){
+            if (this._attachedItems) {
+                // direction < 0 is moving from right to left, > 0 moving from left to right
+                // if |direction| >= 0.5 commit the change other fallback to the old position
+                var  pageVariation = this._scrollLeft / this._viewportWidth;
+                var currentPage = parseInt(Math.abs(pageVariation));
+                var nextPage = velocity < 0 ? currentPage + 1 : currentPage;
+                // this is settle the short distance view position. animate is required
+                this._setCurrentItemInternal(nextPage);
+            }
+        },
+
+        _move: function(delta) {
+            var scrollLeftOrigin = this._touchDragScrollPosition - delta;
+            // make sure translate limit to 0 from the left and width * item -1 from the right which is _scrollableWidth
+            var scrollLeftOriginNoBounce = Math.min(this._scrollableWidth, Math.max(0, scrollLeftOrigin));
+            var scrollLeft = scrollLeftOriginNoBounce;
+            if (this.bounce && (scrollLeftOrigin < 0 || scrollLeftOrigin > this._scrollableWidth)) {
+                // TODO: bounce by touch
+            }
+            this.scroll(scrollLeft, this._scrollTop);
+            return false;
+        },
+
+        _rebindReusableItem: function(item, instance, position){
+            var data = this.items && this.items[position];
+            if (data != null) {
+                instance[this.as] = data;
+                instance[this.indexAs] = position;
+                item.object.removeAttribute('hidden');
+            } else {
+                item.object.setAttribute('hidden', '');
+            }
+        },
+
+        _addNewItem: function(position, index) {
+            if (this._ensureTemplatized()) {
+                var item;
+                var instance;
+                var reusable = false;
+                if (this._reusableItems && this._reusableItems.length > 0) {
+                    item = this._reusableItems.pop();
+                    instance = item.object._templateInstance;
+                    this.toggleClass('be-animated', false, item.object);
+                    this.toggleClass('be-animated-opacity', false, item.object);
+                    item.object.style.opacity = 1;
+                    reusable = true;
+                } else {
+                    instance = this.stamp(null);
+                    item = {};
+                    item.object = instance.root.querySelector('*');
+                }
+
+                item.position = position;
+                item.scrolling = false;
+                item.template = true;
+
+                this._rebindReusableItem(item, instance, position);
+
+                // fix for safari, somehow _onItemsChanged was call after attached
+                if (!this._attachedItems) {
+                    this._attachedItems = [];
+                }
+                if (index < 0) {
+                    this._attachedItems.push(item);
+                } else {
+                    this._attachedItems.splice(index, 0, item);
+                }
+                Polymer.dom(this.$.container).appendChild(reusable ? item.object : instance.root);
+                this.translate3d((position * this._viewportWidth)+'px', 0, 0, item.object);
+                // fire attached event here
+                if (this.enableExtraEvent) {
+                    this.fire('page-attached', {
+                        item: {
+                            position: item.position,
+                            object: item.object,
+                        },
+                        reuabele: reusable
+                    });
+                }
+            }
+        },
+
+        _populateIndicator: function() {
+            // 32px from left and right
+            if (this.items){
+                if (this.items.length == 0 && this._indicatorItem) {
+                    this.splice('_indicatorItem', 0, this._indicatorItem.length);
+                } else {
+                    var availableSpace = this._viewportWidth - 64;
+                    var totalSpace = 0;
+                    this._indicatorItem = [];
+                    for (var i = 0; i < this.items.length; i++){
+                        totalSpace += this._indicatorSize;
+                        if (totalSpace < availableSpace){
+                            this.push('_indicatorItem', i);
+                        } else {
+                            break;
+                        }
+                    }
+                }
+            }
+        },
+
+        _populate: function(newItems) {
+            this._populateWith(this.currentItem, newItems);
+        },
+
+        _populateWith: function(position, forceRebind) {
+            this._isPopulating = true;
+            var startPos = Math.max(0, position - this.pageOffset);
+            var endPos = Math.min(this.items.length - 1, position + this.pageOffset);
+            var lastPos = -1;
+            var item;
+            if (this._attachedItems) {
+                for (var i = 0; i < this._attachedItems.length; i++) {
+                    item = this._attachedItems[i];
+                    if ((item.position < startPos || item.position > endPos) && !item.scrolling) {
+                        // remove
+                        this._attachedItems.splice(i, 1);
+                        Polymer.dom(this.$.container).removeChild(item.object);
+                        this._reusableItems.push(item);
+                        i--;
+                        // fire page-detached here
+                        if (this.enableExtraEvent) {
+                            this.fire('page-detached', {
+                                item: {
+                                    position: item.position,
+                                    object: item.object,
+                                }
+                            });
+                        }
+                    } else if (forceRebind && startPos <= item.position && item.position <= endPos) {
+                        this._rebindReusableItem(item, item.object._templateInstance, item.position);
+                    } else if (lastPos < endPos && item.position > startPos) {
+                        lastPos++;
+                        if (lastPos < startPos){
+                            lastPos = startPos;
+                        }
+                        while (lastPos <= endPos && lastPos < item.position) {
+                            this._addNewItem(lastPos, i);
+                            lastPos++;
+                            i++;
+                        }
+                    }
+                    lastPos = item.position;
+                }
+            }
+
+            lastPos = (this._attachedItems && this._attachedItems.length > 0) ? this._attachedItems[this._attachedItems.length - 1].position : -1;
+            if (lastPos < endPos) {
+                lastPos++;
+                lastPos = lastPos > startPos ? lastPos : startPos;
+                while (lastPos <= endPos) {
+                    this._addNewItem(lastPos, -1);
+                    lastPos++;
+                }
+            }
+            this._isPopulating = false;
+        },
+
+        _setCurrentItemInternal: function(requestIndexItem, noAnimation, noFireState) {
+            if (!this._removeTransitions && (this.items || this.$.container.children.length) && this._viewportWidth != 0 && this._viewportHeight != 0) {
+                // force using internal current item instead for the sake of internal use + external use
+                var max = this.items ? this.items.length : this.$.container.children.length;
+                if (requestIndexItem < 0) {
+                    requestIndexItem = 0;
+                } else if (requestIndexItem >= max){
+                    requestIndexItem = max - 1;
+                }
+
+                if (this.currentItem != requestIndexItem){
+                    // observer will take care the change event and fire the event if there is any change
+                    this.currentItem = requestIndexItem;
+                    // trigger selector indicator
+                    this._currentItemInternal = requestIndexItem;
+                    this._scrollPageTo( (requestIndexItem * this._viewportWidth), !noAnimation, !noFireState);
+                } else if (this._scrollPosition % this._viewportWidth != 0 || this._scrollPosition != this._scrollLeft) {
+                    // look like we need to scroll back the original position
+                    this._scrollPageTo( (requestIndexItem * this._viewportWidth), !noAnimation, !noFireState);
+                }
+            }
+        },
+
+        _scrollPageTo: function(leftTo, animate, fireState) {
+            this._scrollLeftTo = leftTo;
+            this._scrollLeftFrom = this._scrollPosition;
+            this._scrollLeftBy = leftTo - this._scrollPosition;
+            if (this._scrollLeftBy != 0){
+                if (animate){
+                    this._cancelAnimationFrame();
+                    // page is in place, no animation need in this case.
+                    this._isAnimated = true;
+                    this._animationFrameRequestID = requestAnimationFrame(this._animationFrameUpdate.bind(this));
+                } else {
+                    this.scroll(this._scrollLeftTo, this._scrollTop);
+                    //this.translate3d(-this._scrollLeftTo+'px', 0, 0, this.$.container);
+                    //this._scrollPosition = this._scrollLeftTo;
+                }
+            } else {
+                // cancel on going wheel event. This should immediately cancel and stop propagation
+                // of wheel event. delay 80ms to reset the state. Normally wheel event should send
+                // frequently less than 80ms
+                this._shouldStopWheelPropagation = true;
+                if (this._scrollLeftTo != this._scrollLeft) {
+                    this.scroll(this._scrollLeftTo, this._scrollTop);
+                }
+            }
+            if (fireState) {
+                this.fire('page-state-changed', {state: Cmidt.PAGE_STATE_SETTLING});
+                this._state = Cmidt.PAGE_STATE_SETTLING;
+            }
+        },
+
+        _animationFrameUpdate: function(time) {
+            if (this._isAnimated){
+                if (!this._startTime) this._startTime = time;
+                var delta = this._scrollLeftBy * ANIMETION_SPEED_MULTIPLIER * ((time - this._startTime)/1000);
+                var scrollLeft = this._scrollLeftFrom + delta;
+                if (Math.abs(delta) >= Math.abs(this._scrollLeftBy)) {
+                    this.scroll(this._scrollLeftTo, this._scrollTop);
+                    this._startTime = null;
+                    cancelAnimationFrame(this._animationFrameRequestID);
+                    this.async(function() {
+                        // delay small of time to let window finish scroll be attach listener
+                        // back to prevent looping
+                        this._isAnimated = false;
+                        this._onAnimationFinish();
+                    }, 100);
+                    return;
+                }
+                this.scroll(scrollLeft, this._scrollTop);
+                this._animationFrameRequestID = requestAnimationFrame(this._animationFrameUpdate.bind(this));
+            }
+        },
+
+        _cancelAnimationFrame: function() {
+            if (this._animationFrameRequestID) {
+                cancelAnimationFrame(this._animationFrameRequestID);
+                this._isAnimated = false;
+                this._animationFrameRequestID = null;
+                this._startTime = null;
+                this.scroll(this._scrollLeft, this._scrollTop);
+            }
+        },
+
+        _isTrackUnderViewPager: function(target) {
+            while(target) {
+                if (target == this){
+                    return true;
+                }
+                target = target.parentNode;
+            }
+            return false;
+        },
+
+        /**
+         * Set the current item of ViewPager.
+         * If skipSelected is true then the ViewPager will not fire the event
+         * `page-selected`.
+         */
+        setCurrentItem: function(currentItem, skipSelected){
+            this._shouldFireSelectedEvent = !skipSelected;
+            this._setCurrentItemInternal(currentItem);
+        },
+
+        /**
+         * Clear the threshold watcher tiggered. This allow `iron-scroll-threshold` to fire
+         * low threshold again. Normally this method should
+         * be call after new content or page has been populated into ViewPager.
+         */
+        clearTriggers: function() {
+            this.$.threshold.clearTriggers();
+        },
+
+        /**
+         * Update view port boundary and related value base on ViewPager size.
+         */
+        updateViewportBoundaries: function() {
+            var styles = window.getComputedStyle(this);
+            this._isRTL = Boolean(styles.direction === 'rtl');
+            this._viewportWidth = this.offsetWidth;
+            this._viewportHeight = this.offsetHeight;
+            this._populateOffset = 2/3;
+            this._nextPositionOffset = this._viewportWidth * (2/5);
+            if (this.items){
+                this._scrollableWidth = this._viewportWidth * (this.items.length - 1);
+            } else if (this.$.container.children.length > 0) {
+                this._scrollableWidth = this._viewportWidth * (this.$.container.children.length - 1);
+            }
+            this._indicatorSize = parseFloat(this.getComputedStyleValue('--iron-selected-size')) +
+            2 * parseFloat(this.getComputedStyleValue('--iron-item-space'));
+        },
+
+    });
+
+})();
+</script>
+</dom-module>

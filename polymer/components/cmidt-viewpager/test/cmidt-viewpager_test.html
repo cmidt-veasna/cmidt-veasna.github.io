@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, minimum-scale=1, initial-scale=1, user-scalable=yes">
+
+    <title>cmidt-viewpager test</title>
+
+    <script src="../../webcomponentsjs/webcomponents-lite.js"></script>
+    <script src="../../web-component-tester/browser.js"></script>
+
+    <link rel="import" href="../../iron-test-helpers/iron-test-helpers.html">
+    <link rel="import" href="x-viewpager.html">
+</head>
+<body>
+    <test-fixture id="viewpager">
+        <template>
+            <x-viewpager></x-viewpager>
+        </template>
+    </test-fixture>
+
+    <script>
+    suite('cmidt-viewpager', function() {
+        var pager;
+
+        setup(function() {
+            var xpager = fixture('viewpager');
+            pager = xpager.pager;
+        });
+
+        test('instantiating the element works', function() {
+            assert.equal(pager.is, 'cmidt-viewpager');
+        });
+
+        test('element page child', function(done) {
+            flush(function() {
+                var bindingItemNumber = pager.items.length;
+                assert.equal(bindingItemNumber, 6, "The number of item: "+bindingItemNumber+" should be equal 6.");
+                assert.isAtMost(pager._attachedItems.length, bindingItemNumber, 'Physical item should be smaller or equal number of binding object.');
+                assert.equal(pager._attachedItems.length, pager.pageOffset + 1);
+                // TODO: dynamic change of page offset is not implement yet.
+                assert.equal(pager._attachedItems[0].position, pager.currentItem);
+
+                var currentPage = bindingItemNumber - 2;
+                pager.setCurrentItem(Math.max(0, currentPage));
+                window.setTimeout(function() {
+                    assert.equal(pager._attachedItems.length, (pager.pageOffset*2) + 1);
+                    assert.equal(pager._attachedItems[pager.pageOffset].position, currentPage,
+                        ' Position: '+pager._attachedItems[pager.pageOffset].position+' should equal '+currentPage);
+                    assert.equal(pager._attachedItems[pager.pageOffset].position, pager.currentItem,
+                        'Position: '+pager._attachedItems[pager.pageOffset].position+' should equal '+pager.currentItem);
+                    assert.equal(pager._attachedItems[pager.pageOffset].position, pager._currentItemInternal,
+                        'Position: '+pager._attachedItems[pager.pageOffset].position+' should equal '+pager._currentItemInternal);
+                    done();
+                }, 650);
+            });
+        });
+
+        test('element auto-padding', function(done) {
+            pager.autoPadding = true;
+            window.setTimeout(function() {
+                var element = pager._attachedItems[0].object;
+                var style = window.getComputedStyle(element);
+                var expectedWidth = pager._viewportWidth - parseFloat(style['padding-left']) - parseFloat(style['padding-right']);
+                assert.equal(element.children[0].offsetWidth, expectedWidth, 'Child width expect to be smaller than ViewPager when auth-padding set');
+                done();
+            }, 50);
+        });
+
+        test('element clip-padding', function(done) {
+            pager.clipPadding = true;
+            window.setTimeout(function() {
+                var element = pager._attachedItems[0].object;
+                var clipping = pager.querySelector("#clipping");
+                var style = window.getComputedStyle(clipping);
+                var expectedSize = clipping.offsetWidth + 2 * parseFloat(style['margin-left']);
+                assert.equal(element.offsetWidth, clipping.offsetWidth);
+                assert.equal(expectedSize, pager._viewportWidth);
+                done();
+            }, 50);
+        });
+
+        test('element control state', function(done) {
+            var next = pager.querySelector("#next");
+            var previous = pager.querySelector("#previous");
+            assert.isOk(!next.hidden);
+            assert.isOk(!previous.hidden);
+
+            pager.hideControl = true;
+            window.setTimeout(function() {
+                assert.isOk(next.hidden);
+                assert.isOk(previous.hidden);
+                done();
+            }, 50);
+        });
+
+        test('element control action', function(done) {
+            var next = pager.querySelector("#next");
+            var previous = pager.querySelector("#previous");
+
+            var currentItem = pager.currentItem;
+            MockInteractions.tap(next);
+            window.setTimeout(function() {
+                assert.equal(pager.currentItem, currentItem+1, 'Current item should changed.');
+
+                MockInteractions.tap(previous);
+                window.setTimeout(function() {
+                    assert.equal(pager.currentItem, currentItem, 'Current item should changed.');
+                    done();
+                }, 120);
+            }, 120);
+        });
+
+        test('element indicator state', function(done) {
+            var indicator = pager.querySelector("#indicator");
+            assert.isOk(!indicator.hidden);
+
+            pager.hideIndicator = true;
+            window.setTimeout(function() {
+                assert.isOk(indicator.hidden);
+                done();
+            }, 50);
+        });
+
+        test('element indicator action', function(done) {
+            var indicator = pager.querySelector('#indicator');
+            assert.equal(pager.currentItem, indicator.selected);
+
+            var currentItem = pager.currentItem;
+            indicator.selected = currentItem + 1;
+            window.setTimeout(function() {
+                assert.equal(pager.currentItem, currentItem+1);
+
+                currentItem = pager.currentItem + 1;
+                MockInteractions.tap(indicator.children[currentItem]);
+                window.setTimeout(function() {
+                    assert.equal(pager.currentItem, currentItem);
+
+                    currentItem++;
+                    pager.setCurrentItem(currentItem);
+                    window.setTimeout(function() {
+                        assert.equal(pager.currentItem, currentItem);
+                        assert.isOk(indicator.children[currentItem].classList.contains('iron-selected'));
+                        done();
+                    }, 120);
+                }, 120);
+            }, 120);
+        });
+
+        test('element drag action', function(done) {
+            sinon.spy(pager, 'fire');
+            var currentItem = pager.currentItem;
+            MockInteractions.touchstart(pager, {x:0, y:0});
+            MockInteractions.track(pager, -pager._viewportWidth/2, 0, 30);
+
+            window.setTimeout(function() {
+                MockInteractions.touchend(pager, {x:0, y:0});
+                window.setTimeout(function() {
+                    window.setTimeout(function() {
+                        assert.equal(pager.currentItem, currentItem+1);
+                        assert.equal(pager._scrollLeft, pager._viewportWidth);
+                        expect(pager.fire).to.have.been.calledWith('page-selected', {position: currentItem+1});
+                        done();
+                    }, 100);
+                }, 420);
+            }, 300);
+        });
+
+        test('element fire action', function(done) {
+            sinon.spy(pager, 'fire');
+            var nextPage = pager.currentItem + 1;
+            window.setTimeout(function() {
+                MockInteractions.touchstart(pager, {x:0, y:0});
+                MockInteractions.track(pager, -pager._viewportWidth/2, 0, 30);
+                window.setTimeout(function() {
+                    MockInteractions.touchend(pager, {x:0, y:0});
+                        expect(pager.fire).to.have.been.calledWith('page-state-changed', {state: Cmidt.PAGE_STATE_DRAGGED});
+                        expect(pager.fire).to.have.been.calledWith('page-state-changed', {state: Cmidt.PAGE_STATE_SCROLLING});
+                        expect(pager.fire).to.have.been.calledWith('page-state-changed', {state: Cmidt.PAGE_STATE_SETTLING});
+                        expect(pager.fire).to.have.been.calledWith('page-selected', {position: nextPage});
+                        assert.equal(pager.currentItem, nextPage);
+                        expect(pager.fire).to.have.been.calledWith('page-state-changed', {state: Cmidt.PAGE_STATE_IDLE});
+                        assert.equal(pager._scrollLeft, pager._viewportWidth);
+                        done();
+                }, 520);
+            }, 2200);
+        });
+
+        function testResuable(reuabeleCount, pager, expectAttachedSize) {
+            if (reuabeleCount > 0) {
+                // find at lease 1 reusable in the attached
+                var found = false;
+                for (var i = 0; i < pager._attachedItems.length; i++) {
+                    if (pager._attachedItems[i].object.reusable) {
+                        found = true;
+                        break;
+                    }
+                }
+                assert.isOk(found, 'No reusable found.');
+            }
+            // find previous
+            var found = false;
+            for (var i = 0; i < pager._attachedItems.length; i++) {
+                if (pager._attachedItems[i].object.reusable) {
+                    found = true;
+                    break;
+                }
+            }
+            assert.isOk(found, 'No reusable have been use.');
+            assert.isAtLeast(pager._reusableItems.length, 0, 'No child has been reused.');
+            found = false;
+            for (var i = 0; i < pager._attachedItems.length; i++) {
+                if (pager._attachedItems[i].object.marked) {
+                    found = true;
+                    break;
+                }
+            }
+            assert.isOk(found, 'Reuseable item did not found.');
+            assert.equal(pager._attachedItems.length, expectAttachedSize, 'attached pool inconsistant.');
+            assert.isAtMost(pager._attachedItems.length, (2 * pager.pageOffset) + 1, 'attached pool inconsistant.');
+            assert.isAtMost(pager._attachedItems.length + pager._reusableItems.length, pager.items.length, 'reusable seem to be broken.');
+        };
+
+        test('element reusable', function(done) {
+            pager.enableExtraEvent = true;
+
+            var currentItem = pager.currentItem;
+            var reuabeleCount = 0;
+            if (pager._reusableItems) {
+                reusableCount = pager._reusableItems.length;
+                for (var i = 0; i < reusableCount; i++) {
+                    pager._reusableItems[i].object.reuabele = true;
+                }
+            }
+            for (var i = 0; i < pager._attachedItems.length; i++) {
+                pager._attachedItems[i].object.marked = true;
+            }
+            pager.setCurrentItem(pager.items.length-1, true);
+            window.setTimeout(function() {
+                window.setTimeout(function() {
+                    testResuable(reuabeleCount, pager, pager.pageOffset + 1);
+                    pager.setCurrentItem(pager.items.length-2, true);
+                    window.setTimeout(function() {
+                        testResuable(reuabeleCount, pager, (2*pager.pageOffset) + 1);
+                        done();
+                    }, 520);
+                }, 520);
+            }, 4020);
+        });
+
+    });
+    </script>
+</body>
+</html>

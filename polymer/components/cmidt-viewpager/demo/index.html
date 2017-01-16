@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, minimum-scale=1, initial-scale=1, user-scalable=yes">
+
+    <title>cmidt-viewpager demo</title>
+
+    <script src="../../webcomponentsjs/webcomponents-lite.js"></script>
+
+    <link rel="import" href="../../iron-demo-helpers/demo-pages-shared-styles.html">
+    <link rel="import" href="../../iron-demo-helpers/demo-snippet.html">
+    <link rel="import" href="../../paper-button/paper-button.html">
+    <link rel="import" href="../../paper-badge/paper-badge.html">
+    <link rel="import" href="../../paper-radio-group/paper-radio-group.html">
+    <link rel="import" href="../../paper-radio-button/paper-radio-button.html">
+    <link rel="import" href="../cmidt-viewpager.html">
+
+    <style is="custom-style" include="demo-pages-shared-styles">
+    </style>
+</head>
+<body unresolved>
+<dom-module id="cmidt-viewpager-sample">
+<template>
+    <style>
+    :host {
+        --cmidt-page: {
+            margin-bottom: 20px;
+        };
+        --paper-badge-width: 40px;
+        --paper-badge: {
+            border-radius: 20px;
+        };
+    }
+    .pager {
+        width: 100%;
+        height: 320px;
+        margin: auto;
+    }
+    .item {
+        overflow: scroll;
+    }
+    .title {
+        font-size: 16px;
+        font-weight: bold;
+        color: black;
+    }
+    .date {
+        font-size: 11px;
+        color: #5c5c5c;
+        margin: 8px 0 16px 0;
+    }
+    .content {
+        font-size: 13px;
+        color: #6c6c6c;
+    }
+    </style>
+    <div class="vertical-section-container centered">
+        <div style="margin: 16px;">
+            <paper-radio-group id="mode" selected="simple" on-paper-radio-group-changed="_onRadioModeChanged">
+                <paper-radio-button name="simple">SIMPLE PAGE</paper-radio-button>
+                <paper-radio-button name="unlimited">UNLIMITED PAGE</paper-radio-button>
+            </paper-radio-group>
+            <paper-button on-click="_onRemoveCurrentPage">
+                REMOVE CURRENT PAGE
+                <paper-badge label="Beta"></paper-badge>
+            </paper-button>
+            <paper-button on-click="_onAddPage">
+                ADD TO CURRENT PAGE
+                <paper-badge label="Beta"></paper-badge>
+            </paper-button>
+        </div>
+
+        <cmidt-viewpager id="pager" class="pager" auto-padding on-lower-threshold="_onLowThreshold">
+            <template>
+                <div class="item">
+                    <div>
+                        <div class="title">[[item.title]]</div>
+                        <div class="date">[[item.date]]</div>
+                        <div class="content">[[item.content]]</div>
+                    </div>
+                </div>
+            </template>
+        </cmidt-viewpager>
+
+        <span id="pageIndicator" style="margin-left:32px;" hidden></span>
+    </div>
+</template>
+<script>
+    var titles = [
+        "Android Nougat 7.0 Release",
+        "Facebook launch Video chat",
+        "iOS 10.2.1 Release",
+        "Go 1.8 Release",
+        "Polymer is awesome",
+        "Sample ViewPager",
+        "A new version of Google Voice might launch soon",
+        "How the iPhone’s reveal 10 years ago today changed Google forever",
+        "10 best voice recorder apps for Android",
+        "Facebook may get even more annoying with new mid-video ads",
+        "Google patches up a big modem exploit in the Nexus 6 and 6P",
+        "Verizon is ditching “unlimited” data customers who use 200GB or more a month",
+        "Samsung Pay website seemingly confirms Samsung Pay Mini and Bixby",
+        "You can visit a Detroit museum in a new way with Google’s Tango AR camera",
+        "Asus rolling out Android Nougat update to ZenFone 3",
+        "Proposal: Go should have generics",
+        "Results of the Gopher language poll",
+        "iOS 10 and iOS 10.2 features and updates",
+        "iOS 10.2 launched on Monday, December 12",
+        "iOS 10.2.1 public beta 2 update is out too",
+        "A Quick Introduction To Polymer",
+        "Tutorial & Examples: Is Polymer.js the Future?",
+        "An Introduction to Web Components and Polymer",
+        "Kelsey hightower on self deploying go applications",
+        "Write web applications in Go without using a framework",
+        "Consistent hashing - a guide & go implementation",
+        "Go bindata - embed gzipped assets in your app",
+        "Apple releases iOS 10.2.1 beta 3, watchOS 3.1.3 beta 2",
+        "Airmail iOS email app gains new custom actions",
+        "What's new in Apple iOS 10.3? New release for iPhone and iPad"
+    ];
+
+    var contents = [
+        "Lorem ipsum dolor sit amet, id patrioque voluptaria rationibus has, essent inermis conceptam ius ex. Cu facilis civibus temporibus pri. Convenire adolescens sed ut. Cu inani mucius maluisset mel. Graeco torquatos forensibus vix ex, aliquip mandamus mediocrem sed ei. Pri brute iudico quodsi an, elit everti pro ad. Ad nam soluta iriure, ne invenire indoctum vituperata pro. Ea quaeque disputando quo, duo discere aliquam reformidans ne. Nibh accusata eam in. Quas dolor an ius. Vel id fierent albucius, ex vim cibo harum audiam. Ea velit postulant suavitate per, qui eu tibique erroribus. No equidem accusam vulputate vis, partiendo expetendis duo et, cu elitr reformidans nec. An saepe docendi percipitur est. Ei adhuc facilis antiopam eum, odio alii novum at pri.",
+        "Lorem ipsum dolor sit amet, An saepe docendi percipitur est. Ei adhuc facilis antiopam eum, odio alii novum at pri. id patrioque voluptaria rationibus has, essent inermis conceptam ius ex. Cu facilis civibus temporibus pri. Convenire An saepe docendi percipitur est. Ei adhuc facilis antiopam eum, odio alii novum at pri. adolescens sed ut. Cu inani mucius maluisset mel. Graeco torquatos forensibus vix ex, aliquip mandamus mediocrem sed ei. Pri brute iudico quodsi an, elit everti pro ad. Ad nam soluta iriure, ne invenire indoctum vituperata pro. Ea quaeque disputando quo, duo discere aliquam reformidans ne. Nibh accusata eam in. Quas dolor an ius. Vel id fierent albucius, ex vim cibo harum audiam. Ea velit postulant suavitate per, qui eu tibique erroribus. No equidem accusam vulputate vis, partiendo expetendis duo et, cu elitr reformidans nec.",
+        "An saepe docendi percipitur est. Ei adhuc facilis antiopam eum, odio alii novum at pri.",
+        " odio alii novum at pri. id patrioque voluptaria rationibus has, essent inermis conceptam ius ex. Cu facilis civibus temporibus pri. Convenire An saepe docendi percipitur est."
+    ];
+
+    HTMLImports.whenReady(function() {
+        Polymer({
+            is: 'cmidt-viewpager-sample',
+
+            ready: function() {
+                this._onSimplePageMode();
+            },
+
+            _onRadioModeChanged: function(event) {
+                if (this.$.mode.selected == 'simple') {
+                    this._onSimplePageMode();
+                } else if (this.$.mode.selected == 'unlimited') {
+                    this._onUnlimitedPageMode();
+                }
+            },
+
+            _onSimplePageMode: function() {
+                this.$.pager.hideIndicator = false;
+                this.$.pageIndicator.hidden = true;
+                var items = [];
+                var totalTitle = titles.length-1;
+                for (var i = 0; i < 6; i++) {
+                    items.push({
+                        index: i,
+                        title: titles[i],
+                        date:"Sunday, 11, December 2016",
+                        content:contents[Math.floor(Math.random() * 3)]
+                    });
+                }
+                this.$.pager.items = items;
+            },
+
+            _onUnlimitedPageMode: function() {
+                var pager = this.$.pager;
+                pager.hideIndicator = true;
+                pager.clearTriggers();
+                this.$.pageIndicator.innerHTML = pager.currentItem + " of " + pager.items.length;
+                this.$.pageIndicator.hidden = false;
+                this.listen(this, 'page-selected', '_onPageSelectedChanged');
+            },
+
+            _onRemoveCurrentPage: function(){
+                var pager = this.$.pager;
+                pager.splice('items', pager.currentItem, 1);
+            },
+
+            _onAddPage: function() {
+                var pager = this.$.pager;
+                var totalTitle = titles.length - 1;
+                var lastIndex = (pager.items && pager.items.length > 0) ? pager.items[pager.items.length-1].index + 1 : 0;
+                pager.splice('items', pager.currentItem, 0, {
+                    index: lastIndex + 1,
+                    title:titles[Math.floor(Math.random() * totalTitle)],
+                    date:"Sunday, 11, December 2016",
+                    content:contents[Math.floor(Math.random() * 3)]
+                });
+            },
+
+            _onPageSelectedChanged: function(event) {
+                var pager = this.$.pager;
+                this.$.pageIndicator.innerHTML = (pager.currentItem+1) + " of " + pager.items.length;
+            },
+
+            _onLowThreshold: function() {
+                if (this.$.mode.selected == 'unlimited') {
+                    // 600ms to populate new push
+                    this.async(function(){
+                        var totalTitle = titles.length - 1;
+                        var lastIndex = pager.items[pager.items.length-1].index + 1;
+                        var items = [];
+                        for (var i = 0; i < 3; i++) {
+                            items.push({
+                                index: lastIndex + i,
+                                title:titles[Math.floor(Math.random() * totalTitle)],
+                                date:"Sunday, 11, December 2016",
+                                content:contents[Math.floor(Math.random() * 3)]
+                            });
+                        }
+                        // add items with splices all at one. avoid adding one by one
+                        // as pager will fire page-selected again and (event.detail.position >= pager.items.length - 3)
+                        // probably still valid
+                        pager.push("items", ...items);
+                        pager.clearTriggers();
+                    }, 600);
+                }
+            }
+
+        });
+    });
+</script>
+</dom-module>
+<cmidt-viewpager-sample></cmidt-viewpager-sample>
+</body>
+</html>

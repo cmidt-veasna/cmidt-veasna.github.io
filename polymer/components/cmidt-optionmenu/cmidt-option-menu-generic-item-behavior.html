@@ -1,0 +1,335 @@
+<link rel="import" href="../polymer/polymer.html">
+<link rel="import" href="../neon-animation/neon-animation-runner-behavior.html">
+<link rel="import" href="../neon-animation/animations/fade-out-animation.html">
+<link rel="import" href="../neon-animation/animations/fade-in-animation.html">
+<link rel="import" href="../neon-animation/animations/scale-up-animation.html">
+<link rel="import" href="../neon-animation/animations/scale-down-animation.html">
+
+<!--
+`cmidt-option-menu-item-behavior`
+
+
+@demo demo/index.html
+-->
+<script>
+
+var Cmidt = Cmidt || {};
+
+/** @polymerBehavior Cmidt.OptionMenuGenericItemBehavior*/
+var OptionMenuGenericItemBehaviorImpl = {
+
+    properties: {
+        /**
+         * Menu Item id to identify item in the listener
+         */
+        id: String,
+        /**
+         * Title of the item, display in overflow dropdown or tooltip
+         */
+        title: String,
+        /**
+         * Icon represent of the item.
+         */
+        icon: String,
+        /**
+         * Disabled state, present if item is disabled
+         */
+        disabled: {
+            type: Boolean,
+            value: false,
+            observer: "_onPropertyDisabledChanged"
+        },
+        /**
+         * Selected state, use in combination with `cmidt-option-menu-switchable-item`
+         */
+        selected: {
+            type: Boolean,
+            value: false,
+            observer: "_onPropertySelectedChanged"
+        },
+        /**
+         * If present the menu item will alway be visible but if the room is still not
+         * enough to display such item will be add to overflow dropdown menu.
+         */
+        alwayShow: {
+            type: Boolean,
+            value: false,
+            observer: "_onPropertyAlwayShowChanged"
+        },
+        /**
+         * If present the menu item will only show if there is room available.
+         */
+        ifRoom: {
+            type: Boolean,
+            value: false,
+            observer: "_onPropertyIfRoomChanged"
+        },
+        /**
+         * If present the menu item will alway added to overflow dropdown menu
+         */
+        alwayHide: {
+            type: Boolean,
+            value: false,
+            observer: "_onPropertyAlwayHideChanged"
+        },
+        /**
+         * If present item will be invisible, the item will be hide as well if the
+         * item is not a child of `cmidt-option-menu-switchable-item`
+         */
+        invisible: {
+          type: Boolean,
+          observer: "_onVisibilityChanged"
+        },
+        /**
+         * If present the item will not display ripple effect
+         */
+        noink: {
+            type: Boolean,
+            observer: "_onPropertyInkChanged"
+        },
+        /**
+         * If present the item will display title a long side icon. Currently by option menu to show the title
+         * when item is attached to overflow dropdown menu.
+         */
+        showTitle: {
+            type: Boolean,
+            value: false,
+            reflectToAttribute: true,
+            observer: "_onPropertyShowTitleChanged"
+        },
+        /**
+         * Animation to hide or show the item. Default configuration is set to scale plus fade when
+         * switch show or hide. This will be use to animate when remove or add the item.
+         */
+        animationConfig: {
+            type: Object,
+            value: function(){
+                var animateObj = {
+                    // scale + fade animation
+                    'visible': [{
+                        name: 'scale-up-animation',
+                        node: this.animatableElement(),
+                        timing: {
+                            duration: 320
+                        }
+                    },
+                    {
+                        name: 'fade-in-animation',
+                        node: this.animatableElement(),
+                        timing: {
+                            duration: 420
+                        }
+                    }],
+                    'invisible': [{
+                        name: 'scale-down-animation',
+                        node: this.animatableElement(),
+                        timing: {
+                            duration: 320
+                        }
+                    },
+                    {
+                        name: 'fade-out-animation',
+                        node: this.animatableElement(),
+                        timing: {
+                            duration: 420
+                        }
+                    }]
+                };
+                this.onDefineAnimationDefinition(animateObj);
+                return animateObj;
+            },
+            _rippleRetangle: {
+                type: Boolean,
+                value: false,
+                notify: true,
+                observer: "_onRippleFormChanged"
+            }
+        },
+        _representObject: {
+            type: Object,
+            value: function(){
+                return {
+                    id: this.id,
+                    title: this.title,
+                    icon: this.icon,
+                    disabled: this.disabled,
+                    selected: this.selected,
+                    alwayHide: this.alwayHide,
+                    alwayShow: this.alwayShow,
+                    ifRoom: this.ifRoom,
+                    invisible: this.invisible,
+                    noink: this.noink,
+                    animationConfig: this.animationConfig
+                };
+            },
+            observer: "_onRepresentObjectChanged"
+        }
+    },
+
+    listeners: {
+        'neon-animation-finish': '_onAnimationFinish',
+        'tap': '_onItemTap',
+    },
+
+    _isMenuItem: true,
+
+    _indexMenu: Number,
+
+    /**
+     * Inherit method from `cmidt-option-menu-item-behavior` behaviors. Custom item implement menu item
+     * behavior should return an element which can be animate in occurred of event remove, add, show and hide.
+     */
+    animatableElement: function(){
+        //console.warn("Child must implement this method.");
+    },
+
+    _onAnimationFinish: function() {
+        if (this.invisible) {
+            this.style.display = '';
+            this.style.visibility = 'hidden';
+        }
+        if (!this.parentNode._isSwitchableMenuItem){
+            this.hidden = this.invisible;
+        }
+        this.onAnimationFinished();
+    },
+
+    _onItemTap: function(e) {
+        if (!this.disabled) {
+            var target = e.target;
+            var isFromOverflow = this.parentNode && this.parentNode.localName !== 'cmidt-option-menu';
+            while (target) {
+                if (target.localName == 'cmidt-option-menu-item') {
+                    if (target.parentNode.localName == 'cmidt-option-menu-switchable-item'){
+                        // let switchable item handle tap instead
+                        return;
+                    }
+                    this.fire('item-tap',{item: {
+                        id: this.getId(),
+                        title: this.getTitle(),
+                        icon: this.getIcon(),
+                        item: this,
+                        overflow: isFromOverflow
+                    }});
+                    if (isFromOverflow){
+                        this.fire('overflow-item-tap', {item: this});
+                    }
+                    break;
+                }
+                target = target.parentNode;
+            }
+        }
+        e.stopPropagation();
+        e.preventDefault();
+    },
+
+    /**
+     * Inherit method from `cmidt-option-menu-item-behavior` behaviors. Custom item implement menu item
+     * behavior should return an element which can be animate in occurred of event remove, add, show and hide.
+     */
+    onDefineAnimationDefinition: function(animateObj) {
+    },
+
+    /**
+     * Listener invoked when the animation is finish. This might be call multiple time if the animation is repeated
+     */
+    onAnimationFinished: function() {
+    },
+
+    _onPropertySelectedChanged: function(){
+        if (this.parentNode && this.parentNode._isSwitchableMenuItem) {
+            this.invisible = !this.selected;
+            // show the item but invisible so the item scale look nicer
+            if (!this.invisible){
+                this.style.visibility = 'visible';
+                this.hidden = false;
+            }
+        }
+    },
+
+    _onVisibilityChanged: function() {
+        if (this.invisible){
+            this.playAnimation('invisible');
+        } else {
+            this.style.display = 'inline-block';
+            this.style.visibility = 'visible';
+            this.playAnimation('visible');
+        }
+    },
+
+    _onPropertyDisabledChanged: function(){
+    },
+
+    _onPropertyAlwayShowChanged: function() {
+    },
+
+    _onPropertyIfRoomChanged: function() {
+    },
+
+    _onPropertyAlwayHideChanged: function() {
+    },
+
+    _onPropertyInkChanged: function() {
+    },
+
+    _onPropertyShowTitleChanged: function() {
+    },
+
+    _onRepresentObjectChanged: function(newValue, oldValue) {
+    },
+
+    /**
+     * Get the item id
+     */
+    getId: function(){
+        return this.id;
+    },
+
+    /**
+     * Get the item title
+     */
+    getTitle: function(){
+        return this.title;
+    },
+
+    /**
+     * Get the item icon
+     */
+    getIcon: function(){
+        return this.icon;
+    },
+
+    /**
+     * Toggle visibility of the item. This will trigger the animation as well.
+     */
+    toggle: function() {
+        this.invisible = !this.invisible;
+    },
+
+    /**
+     * Show item if previously hide
+     */
+    show: function() {
+        if (this.invisible){
+            this.invisible = false;
+            this.hidden = false;
+        }
+    },
+
+    /**
+     * Hide item if current visible
+     */
+    hide: function() {
+        if (!this.invisible){
+            this.invisible = true;
+        }
+    }
+
+};
+
+Cmidt.OptionMenuGenericItemBehavior = [
+    Polymer.NeonAnimationRunnerBehavior,
+    OptionMenuGenericItemBehaviorImpl
+];
+
+</script>

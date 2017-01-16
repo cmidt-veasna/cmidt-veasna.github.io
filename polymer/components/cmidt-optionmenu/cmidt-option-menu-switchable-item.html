@@ -1,0 +1,134 @@
+<link rel="import" href="../polymer/polymer.html">
+<link rel="import" href="../iron-flex-layout/iron-flex-layout.html">
+<link rel="import" href="../iron-resizable-behavior/iron-resizable-behavior.html">
+<link rel="import" href="cmidt-option-menu-switchable-item-behavior.html">
+<link rel="import" href="cmidt-option-menu-switchable-item-shared-style.html">
+
+<!--
+`cmidt-switchable-menu-item` is menu item used to hold sub element of `cmidt-option-menu-item`.
+switchable item provide the ability to animate between `cmidt-option-menu-item`.
+
+Example:
+
+    <cmidt-option-menu-switchable-item id="switchable" auto>
+        <cmidt-option-menu-item
+            id="download"
+            title="download"
+            icon="icons:cloud-download"
+            selected>
+        </cmidt-option-menu-item>
+        <cmidt-option-menu-item
+            id="past"
+            title="paste"
+            icon="icons:content-paste">
+        </cmidt-option-menu-item>
+    </cmidt-option-menu-switchable-item>
+
+@demo demo/index.html
+-->
+
+<dom-module id="cmidt-option-menu-switchable-item">
+    <template>
+    <style include="cmidt-option-menu-switchable-item-shared-styles"></style>
+    <style>
+    #fake {
+        display: inline-block;
+        position: relative;
+        visibility: hidden;
+    }
+
+    :host[show-title] #fake {
+        font-size: 14px;
+        padding: 0 24px 0 calc(var(--inner-item-height) + 24px);
+        height: calc(var(--inner-item-height) + 24px);
+        text-transform: uppercase;
+    }
+    </style>
+    <div id="fake"></div>
+    <content><content>
+</template>
+
+<script>
+Polymer({
+
+    is: 'cmidt-option-menu-switchable-item',
+
+    behaviors: [
+        Cmidt.OptionMenuSwitchableItemBehavior
+    ],
+
+    _activeItem: Element,
+
+    _maxWidth: 0,
+
+    attached: function() {
+        if (this._menus){
+            var title = "";
+            for (let i = 0; i < this._menus.length; i++){
+                var childTitle = this._menus[i].getTitle();
+                if (childTitle.length > title.length){
+                    title = childTitle;
+                }
+            }
+            this.$.fake.innerHTML = title;
+        }
+    },
+
+    _onPropertyDisabledChanged: function() {
+        if (this._activeItem && this._activeItem.localName){
+            this._activeItem.disabled = this.disabled;
+        }
+    },
+
+    _onPropertyShowTitleChanged: function() {
+        if (this._menus){
+            for (let i = 0; i < this._menus.length; i++){
+                this._menus[i].showTitle = this.showTitle;
+            }
+        }
+    },
+
+    _onSwitchableItemFreezed: function(){
+    },
+
+    _onItemTap: function(e) {
+        if (!this.disabled && !this.freeze){
+            e.stopPropagation();
+            e.preventDefault();
+            var target = e.target;
+            var isFromOverflow = this.parentNode && this.parentNode.localName !== 'cmidt-option-menu';
+            while (target) {
+                if (target.localName == 'cmidt-option-menu-switchable-item'){
+                    this.fire('item-tap',{item: {
+                        id: target.getActiveItemId(),
+                        title: target.getActiveItemTitle(),
+                        icon: target.getActiveItemIcon(),
+                        item: target._activeItem,
+                        switchable: this,
+                        overflow: isFromOverflow
+                    }});
+                    break;
+                }
+                target = target.parentNode;
+            }
+            if (this.id) {
+                // inform that parent node switchable item has tapped
+                this.fire('item-tap',{item: {
+                    id: target.getId(),
+                    title: target.getTitle(),
+                    item: this,
+                    overflow: isFromOverflow
+                }});
+            }
+            if (isFromOverflow){
+                this.fire('overflow-item-tap', {item: target, switchable: this});
+            }
+            if (this.auto) {
+                this.toggle();
+            }
+        }
+    },
+
+});
+</script>
+</dom-module>

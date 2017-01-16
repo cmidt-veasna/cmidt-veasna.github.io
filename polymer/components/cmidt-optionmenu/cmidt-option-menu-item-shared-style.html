@@ -1,0 +1,58 @@
+<link rel="import" href="../iron-flex-layout/iron-flex-layout.html">
+
+<dom-module id="cmidt-option-menu-item-shared-styles">
+<template>
+    <style>
+    :host {
+        display: inline-block;
+        position: relative;
+        --inner-item-width: calc(var(--cmidt-option-menu-item-size, 40px) - 16px);
+        --inner-item-height: calc(var(--cmidt-option-menu-item-size, 40px) - 16px);
+
+        outline: none;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+        cursor: pointer;
+        z-index: 0;
+        line-height: 1;
+        padding: 8px;
+        background: transparent;
+
+        width: var(--cmidt-option-menu-item-size, 40px);
+        height: var(--cmidt-option-menu-item-size, 40px);
+
+        /* NOTE: Both values are needed, since some phones require the value to be `transparent`. */
+        -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+        -webkit-tap-highlight-color: transparent;
+
+        /* Because of polymer/2558, this style has lower specificity than * */
+        box-sizing: border-box !important;
+        @apply(--cmidt-option-menu-item);
+    }
+
+    :host #ink {
+      color: var(--paper-icon-button-ink-color, --primary-text-color);
+      opacity: 0.6;
+    }
+
+    :host([disabled]) {
+      color: var(--paper-icon-button-disabled-text, --disabled-text-color);
+      pointer-events: none;
+      cursor: auto;
+
+      @apply(--cmidt-option-menu-item-disabled);
+    }
+
+    :host[show-title] {
+        width: 100%;
+        height: auto;
+        min-width: var(--inner-item-width);
+        padding: 12px;
+        display: block;
+        border-radius: 0;
+    }
+    </style>
+</template>
+</dom-module>

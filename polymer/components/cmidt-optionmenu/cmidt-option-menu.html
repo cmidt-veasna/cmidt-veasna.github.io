@@ -1,0 +1,421 @@
+<link rel="import" href="../polymer/polymer.html">
+<link rel="import" href="../iron-flex-layout/iron-flex-layout.html">
+<link rel="import" href="../iron-dropdown/iron-dropdown.html">
+<link rel="import" href="../neon-animation/neon-animations.html">
+<link rel="import" href="../paper-styles/shadow.html">
+<link rel="import" href="cmidt-option-menu-behavior.html">
+<link rel="import" href="cmidt-option-menu-item-behavior.html">
+<link rel="import" href="cmidt-option-menu-item.html">
+<link rel="import" href="cmidt-option-menu-switchable-item.html">
+<link rel="import" href="animation/cmidt-grow-animation.html">
+
+<!--
+The `cmidt-option-menu` element is like android option menu. Optoin menu support
+option available on Android and automatically create an overflow menu dropdown when
+there is not enough room to display all item.
+
+Example:
+
+    <cmidt-option-menu>
+        <cmidt-option-menu-item
+            id="shopping"
+            title="add shopping"
+            icon="icons:add-shopping-cart">
+        </cmidt-option-menu-item>
+        <cmidt-option-menu-item
+            id="create"
+            title="create"
+            icon="icons:create">
+        </cmidt-option-menu-item>
+        <cmidt-option-menu-switchable-item id="switchable" auto>
+            <cmidt-option-menu-item
+                id="download"
+                title="download"
+                icon="icons:cloud-download" selected>
+            </cmidt-option-menu-item>
+            <cmidt-option-menu-item
+                id="done"
+                title="done"
+                icon="icons:done">
+            </cmidt-option-menu-item>
+        </cmidt-option-menu-switchable-item>
+    </cmidt-option-menu>
+
+Option menu come with behavior which allow any customization component to display
+under Option menu and keep functionality the same as existing element such as
+`cmidt-option-menu-item` and `cmidt-option-menu-switchable-item`
+
+The following custom properties and mixins are also available for styling:
+
+Custom property | Description | Default
+----------------|-------------|----------
+`--cmidt-option-menu` | Styling for option menu container
+`--cmidt-option-menu-item` | Styling Option menu item
+`--cmidt-option-menu-item-size` | Option menu item size | 40px
+`--cmidt-option-menu-item-disabled` | Style for disabled option menu item
+`--cmidt-option-menu-overlow-order` | Styling for overflow option menu item
+
+@demo demo/index.html
+-->
+
+<dom-module id="cmidt-option-menu">
+<template>
+    <style>
+    :host {
+        display: block;
+        position: relative;
+        overflow: hidden;
+        @apply(--cmidt-option-menu);
+    }
+
+    :host[orientation="horizontal"] {
+        @apply(--layout-horizontal);
+    }
+
+    :host[orientation="vertical"] {
+        @apply(--layout-vertical);
+        display: inline-flex;
+    }
+
+    :host[align="right"] {
+        @apply(--layout-end-justified);
+    }
+
+    :host[align="bottom"] {
+        @apply(--layout-end);
+    }
+
+    :host[align="left"] {
+        @apply(--layout-start-justified);
+    }
+
+    :host[align="top"] {
+        @apply(--layout-start);
+    }
+
+    :host[align="left"] #overflowButton, :host[align="top"] #overflowButton {
+        order: 0;
+        @apply(--cmidt-option-menu-overlow-order);
+    }
+
+    :host[align="right"] #overflowButton, :host[align="bottom"] #overflowButton {
+        order: 1000;
+        @apply(--cmidt-option-menu-overlow-order);
+    }
+
+    #dropdown {
+        width: auto;;
+        height: auto;
+        overflow: inherit;
+        min-width: inherit;
+        min-height: inherit;
+    }
+
+    :host ::content > * {
+        /*order: 1;*/
+    }
+
+    #overflowButton, :host ::content > * {
+        width: var(--cmidt-option-menu-item-size, 40px);
+        height: var(--cmidt-option-menu-item-size, 40px);
+        min-width: var(--cmidt-option-menu-item-size, 40px);
+        min-height: var(--cmidt-option-menu-item-size, 40px);
+        overflow: hidden;
+    }
+
+    .show-item, :host ::content > .show-item {
+        /* 0 does not work so we have to use a small number */
+        /* Start our small */
+        width: 0;
+        min-width: 0;
+        opacity: 0;
+        transform: scale(0,0);
+
+        -webkit-animation: widthGrow 250ms ease forwards, itemAppear 250ms ease-in-out 100ms forwards;
+        -o-animation: widthGrow 250ms ease forwards, itemAppear 250ms ease-in-out 100ms forwards;
+        animation: widthGrow 250ms ease forwards, itemAppear 250ms ease-in-out 100ms forwards;
+    }
+
+    .hide-item, :host ::content > .hide-item {
+        width: var(--cmidt-option-menu-item-size, 40px);
+        min-width: var(--cmidt-option-menu-item-size, 40px);
+        opacity: 1;
+        transform: scale(1,1);
+
+        -webkit-animation: itemDisappear 250ms ease-in-out forwards, widthShrink 200ms ease 150ms forwards;
+        -o-animation: itemDisappear 250ms ease-in-out forwards, widthShrink 200ms ease 150ms forwards;
+        animation: itemDisappear 250ms ease-in-out forwards, widthShrink 200ms ease 150ms forwards;
+    }
+
+    @-webkit-keyframes itemDisappear {
+        to { opacity: 0; transform: scale(0,0); }
+    }
+    @-o-keyframes itemDisappear {
+        to { opacity: 0; transform: scale(0,0); }
+    }
+    @keyframes itemDisappear {
+        to { opacity: 0; transform: scale(0,0); }
+    }
+
+    @-webkit-keyframes widthShrink {
+        to { width: 0; min-width:0; }
+    }
+    @-o-keyframes widthShrink {
+        to { width: 0; min-width:0; }
+    }
+    @keyframes widthShrink {
+        to { width: 0; min-width:0; }
+    }
+
+    @-webkit-keyframes itemAppear {
+        to { opacity: 1; transform: scale(1,1); }
+    }
+    @-o-keyframes itemAppear {
+        to { opacity: 1; transform: scale(1,1); }
+    }
+    @keyframes itemAppear {
+        to { opacity: 1; transform: scale(1,1); }
+    }
+
+    @-webkit-keyframes widthGrow {
+        to { width: var(--cmidt-option-menu-item-size, 40px); min-width: var(--cmidt-option-menu-item-size, 40px); }
+    }
+    @-o-keyframes widthGrow {
+        to { width: var(--cmidt-option-menu-item-size, 40px); min-width: var(--cmidt-option-menu-item-size, 40px); }
+    }
+    @keyframes widthGrow {
+        to { width: var(--cmidt-option-menu-item-size, 40px); min-width: var(--cmidt-option-menu-item-size, 40px); }
+    }
+
+    #dropdown {
+        padding: 2px;
+    }
+
+    #listbox {
+        @apply(--layout-verical);
+        @apply(--shadow-elevation-2dp);
+        background-color: white;
+    }
+
+    #listbox ::content > cmidt-option-menu-item, #listbox ::content > cmidt-option-menu-switchable-item {
+        color: black;
+    }
+    </style>
+    <content></content>
+    <cmidt-option-menu-item id="overflowButton" title="overflow" class="dropdown-trigger" on-tap="_handleOverflowTap" icon="[[_getOverflowIcon(orientation, overflow)]]" hidden="[[!_overflow]]" invisible="[[!_overflow]]"></cmidt-option-menu-item>
+    <iron-dropdown id="dropdown"
+        vertical-align="[[_getDropdownVerticalAlign(orientation, align, overflowVerticalAlign)]]"
+        horizontal-align="[[_getDropdownHorizontalAlign(orientation, align, overflowHorizontalAlign)]]"
+        open-animation-config="[[_openAnimationConfig]]"
+        close-animation-config="[[_closeAnimationConfig]]">
+        <div id="listbox" class="dropdown-content">
+        </div>
+    </iron-dropdown>
+</template>
+
+<script>
+Polymer({
+
+    is: 'cmidt-option-menu',
+
+    behaviors: [
+        Cmidt.OptionMenuBehavior
+    ],
+
+    properties: {
+        /**
+         * An icon for overflow option button. Default is set to icons:more-vert when horizontal orientation is used
+         * or icons:more-horiz when vertical orientation is used.
+         */
+        overflow: {
+            type: String,
+            value: ""
+        },
+        _openAnimationConfig: {
+            type: Array,
+            value: function() {
+                var _this = this;
+                return [{
+                    name: 'fade-in-animation',
+                    timing: {
+                        delay: 150,
+                        duration: 50
+                    }
+                }, {
+                    name: 'cmidt-grow-animation',
+                    verticalAlign: function(){
+                        return _this._getVerticalAlignment();
+                    },
+                    horizontalAlign: function(){
+                        return _this._getHorizontalAlignment();
+                    },
+                    timing: {
+                        delay: 150,
+                        duration: 200
+                    }
+                }];
+            }
+        },
+        _closeAnimationConfig: {
+            type: Array,
+            value: function() {
+                return [{
+                    name: 'fade-out-animation',
+                    timing: {
+                        duration: 200
+                    }
+                }];
+            }
+        }
+    },
+
+    listeners: {
+        'overflow-item-tap': '_handleOverflowItemTap'
+    },
+
+    _getVerticalAlignment: function(){
+        return this._getDropdownVerticalAlign(this.orientation, this.align, this.overflowVerticalAlign);
+    },
+
+    _getHorizontalAlignment: function(){
+        return this._getDropdownHorizontalAlign(this.orientation, this.align, this.overflowHorizontalAlign);
+    },
+
+    _getOverflowIcon: function(orientation, overflow) {
+        if (overflow) {
+            return overflow;
+        }
+        return orientation == "horizontal" ? "icons:more-vert" : "icons:more-horiz";
+    },
+
+    _getDropdownVerticalAlign: function(orientation, align, overflowVerticalAlign) {
+        if (orientation == "vertical"){
+            return align;
+        } else {
+            return overflowVerticalAlign;
+        }
+    },
+
+    _getDropdownHorizontalAlign: function(orientation, align, overflowHorizontalAlign) {
+        if (orientation == "horizontal"){
+            return align;
+        } else {
+            return overflowHorizontalAlign;
+        }
+    },
+
+    _handleOverflowTap: function(e){
+        this.$.dropdown.open();
+    },
+
+    _handleOverflowItemTap: function(e){
+        this.$.dropdown.close();
+    },
+
+    _onOverflowItemsChange: function(e){
+        this.$.dropdown.close();
+    },
+
+    toggleMenuItemVisibility: function(menuItem){
+        if (menuItem._isInvisible){
+            this.showMenuItem(menuItem);
+        } else {
+            this.hideMenuItem(menuItem);
+        }
+    },
+
+    showMenuItem: function(menuItem) {
+        this.toggleClass('hide-item', false, menuItem);
+        this.toggleClass('show-item', true, menuItem);
+        menuItem._isInvisible = false;
+    },
+
+    hideMenuItem: function(menuItem) {
+        this.toggleClass('show-item', false, menuItem);
+        this.toggleClass('hide-item', true, menuItem);
+        menuItem._isInvisible = true;
+    },
+
+    addMenuItem: function(menuItem, index) {
+        var listboxDomAPI = Polymer.dom(this.$.listbox);
+        var item = listboxDomAPI.querySelector("#"+menuItem.id);
+        if(item){
+            listboxDomAPI.removeChild(item);
+        }
+        var menuDomAPI = Polymer.dom(this);
+        if (!menuItem.classList.contains('show-item') && !menuDomAPI.querySelector("#"+menuItem.id)){
+            var beforeItem = menuDomAPI.querySelector(":scope > :nth-child("+index+")");
+            if ((this._menuItems && index == this._menuItems.length - 1) || !beforeItem) {
+                // append
+                menuDomAPI.appendChild(menuItem);
+            } else {
+                // insert before
+                menuDomAPI.insertBefore(menuItem, beforeItem);
+            }
+            this.toggleClass('hide-item', false, menuItem);
+            this.toggleClass('show-item', true, menuItem);
+            this._listenCssAnimaton(menuItem, 'AnimationEnd', '_onItemAppeared');
+        }
+    },
+
+    removeMenuItem: function(menuItem) {
+        if (!menuItem.classList.contains('hide-item') && Polymer.dom(this).querySelector("#"+menuItem.id)){
+            if(this._shouldAnimate){
+                this.toggleClass('show-item', false, menuItem);
+                this.toggleClass('hide-item', true, menuItem);
+                this._listenCssAnimaton(menuItem, 'AnimationEnd', '_onItemDisappeared');
+            } else {
+                this._addToOverflow(menuItem);
+            }
+        }
+    },
+
+    _getItemSize: function() {
+        return this.children[0].getBoundingClientRect().width || this.$.overflowButton.getBoundingClientRect().width;
+    },
+
+    _onItemAppeared: function(e) {
+        this._unlistenCssAnimaton(e.target, 'AnimationEnd', '_onItemAppeared');
+        this.toggleClass('show-item', false, e.target);
+    },
+
+    _onItemDisappeared: function(e) {
+        if (e.target._isMenuItem) {
+            this._unlistenCssAnimaton(e.target, 'AnimationEnd', '_onItemDisappeared');
+            this._addToOverflow(e.target);
+            this.toggleClass('hide-item', false, e.target);
+        }
+    },
+
+    _addToOverflow: function(menuItem){
+        Polymer.dom(this).removeChild(menuItem);
+        if (this._overflowItems){
+            for (var i = 0; i < this._overflowItems.length; i++){
+                if (this._overflowItems[i] == menuItem){
+                    Polymer.dom(this.$.listbox).appendChild(menuItem);
+                    menuItem.showTitle = true;
+                    break;
+                }
+            }
+        }
+    },
+
+    _listenCssAnimaton: function(item, type, callback) {
+        var pfx = ["webkit", "moz", "MS", "o", ""];
+        for (var p = 0; p < pfx.length; p++) {
+            if (!pfx[p]) type = type.toLowerCase();
+            this.listen(item, pfx[p]+type, callback);
+        }
+    },
+
+    _unlistenCssAnimaton: function(item, type, callback) {
+        var pfx = ["webkit", "moz", "MS", "o", ""];
+        for (var p = 0; p < pfx.length; p++) {
+            if (!pfx[p]) type = type.toLowerCase();
+            this.unlisten(item, pfx[p]+type, callback);
+        }
+    },
+
+});
+</script>
+</dom-module>

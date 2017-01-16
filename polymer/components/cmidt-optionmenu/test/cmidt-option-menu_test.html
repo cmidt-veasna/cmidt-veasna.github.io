@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, minimum-scale=1, initial-scale=1, user-scalable=yes">
+
+    <title>cmidt-option-menu test</title>
+
+    <script src="../../webcomponentsjs/webcomponents-lite.js"></script>
+    <script src="../../web-component-tester/browser.js"></script>
+    <link rel="import" href="../../iron-resizable-behavior/iron-resizable-behavior.html">
+
+    <link rel="import" href="../cmidt-option-menu.html">
+</head>
+<body>
+    <test-fixture id="horizontal">
+        <template>
+            <div id="container">
+                <cmidt-option-menu id="option">
+                    <cmidt-option-menu-item id="shopping" title="add shopping" icon="icons:add-shopping-cart"></cmidt-option-menu-item>
+                    <cmidt-option-menu-item id="create" title="create" icon="icons:create" disabled></cmidt-option-menu-item>
+                    <cmidt-option-menu-switchable-item id="switchable0" auto>
+                        <cmidt-option-menu-item id="download" title="download" icon="icons:cloud-download" selected></cmidt-option-menu-item>
+                        <cmidt-option-menu-item id="past" title="paste" icon="icons:content-paste"></cmidt-option-menu-item>
+                    </cmidt-option-menu-switchable-item>
+                    <cmidt-option-menu-item id="build" title="build" icon="icons:build"></cmidt-option-menu-item>
+                    <cmidt-option-menu-item id="cloud" title="cloud" icon="icons:cloud"></cmidt-option-menu-item>
+                    <cmidt-option-menu-item id="archive" title="archive" icon="icons:archive"></cmidt-option-menu-item>
+                    <cmidt-option-menu-item id="backup" title="backup" icon="icons:backup"></cmidt-option-menu-item>
+                    <cmidt-option-menu-item id="copy" title="copy" icon="icons:content-copy" alway-hide></cmidt-option-menu-item>
+                </cmidt-option-menu>
+                <x-resizeable></x-resizeable>
+            </div>
+        </template>
+    </test-fixture>
+    <script>
+    HTMLImports.whenReady(function() {
+        Polymer({
+            is: 'x-resizeable',
+            behaviors: [
+                Polymer.IronResizableBehavior
+            ]
+        });
+    });
+
+    suite('cmidt-option-menu', function() {
+        var optionMenu, container;
+        setup(function() {
+            container = fixture('horizontal');
+            optionMenu = container.querySelector("#option");
+        });
+
+        test('instantiating the element works', function() {
+            assert.equal(optionMenu.is, 'cmidt-option-menu');
+        });
+
+        test('option menu orientation horizontal', function(done) {
+            assert.equal(optionMenu.orientation, 'horizontal');
+            window.setTimeout(function() {
+                // one hidden + overflow = 8 child menu item
+                assert.isAtLeast(optionMenu.getBoundingClientRect().width, 8*40, 'valid width');
+                assert.equal(optionMenu.getBoundingClientRect().height, 40, 'valid height');
+                var totalChild = 0;
+                for (var i = 0; i < optionMenu.children.length; i++) {
+                    if (optionMenu.children[i]._isMenuItem) {
+                        totalChild++;
+                    }
+                }
+                // overflow + child menu item - 1 which alway hide = 8
+                assert.equal(totalChild, 8, 'valid option menu item.');
+                //assert.equal(element.$.overflowDropdown.invisible, false, 'valid overflow menu item');
+                assert.equal(optionMenu.$.listbox.children.length, 1, 'at least one item is alway hide');
+                done();
+            }, 50);
+        });
+
+        test('option menu orientation vertical', function(done) {
+            optionMenu.orientation = 'vertical';
+            window.setTimeout(function() {
+                assert.equal(optionMenu.orientation, 'vertical');
+                // one hidden + overflow = 8 child menu item
+                assert.isAtLeast(optionMenu.getBoundingClientRect().height, 8*40, 'valid height');
+                assert.equal(optionMenu.getBoundingClientRect().width, 40, 'valid width');
+                var totalChild = 0;
+                for (var i = 0; i < optionMenu.children.length; i++) {
+                    if (optionMenu.children[i]._isMenuItem) {
+                        totalChild++;
+                    }
+                }
+                // overflow + child menu item - 1 which alway hide = 8
+                assert.equal(totalChild, 8, 'valid option menu item.');
+                //assert.equal(element.$.overflowDropdown.invisible, false, 'valid overflow menu item');
+                assert.equal(optionMenu.$.listbox.children.length, 1, 'at least one item is alway hide');
+                done();
+            }, 50);
+        });
+
+        test('responsiveWidth remove 2 item', function(done) {
+            // expect one item to be remove from the opion menu
+            container.style.width = (8*40 - 45)+"px";
+            window.setTimeout(function() {
+                var totalChild = 0;
+                for (var i = 0; i < optionMenu.children.length; i++) {
+                    if (optionMenu.children[i]._isMenuItem) {
+                        totalChild++;
+                    }
+                }
+                // overflow + child menu item - 1 which alway hide = 8
+                // total is 7. expected 1 to be hide then total item should be 6
+                assert.equal(totalChild, 6, 'valid option menu item.');
+                //assert.equal(element.$.overflowDropdown.invisible, false, 'valid overflow menu item');
+                assert.equal(optionMenu.$.listbox.children.length, 3, 'at least one item is alway hide');
+                done();
+            }, 50);
+        });
+
+        test('responsiveWidth remove 4 item', function(done) {
+            // expect one item to be remove from the opion menu
+            container.style.width = (8*40 - 125)+"px";
+            window.setTimeout(function() {
+                var totalChild = 0;
+                for (var i = 0; i < optionMenu.children.length; i++) {
+                    if (optionMenu.children[i]._isMenuItem) {
+                        totalChild++;
+                    }
+                }
+                // overflow + child menu item - 1 which alway hide = 8
+                // total is 7. expected 1 to be hide then total item should be 6
+                assert.equal(totalChild, 4, 'valid option menu item.');
+                //assert.equal(element.$.overflowDropdown.invisible, false, 'valid overflow menu item');
+                assert.equal(optionMenu.$.listbox.children.length, 5, 'at least one item is alway hide');
+                done();
+            }, 50);
+        });
+
+        test('responsiveWidth release 2 item', function(done) {
+            // expect one item to be remove from the opion menu
+            container.style.width = (8*40 - 45)+"px";
+            window.setTimeout(function() {
+                var totalChild = 0;
+                for (var i = 0; i < optionMenu.children.length; i++) {
+                    if (optionMenu.children[i]._isMenuItem) {
+                        totalChild++;
+                    }
+                }
+                // overflow + child menu item - 1 which alway hide = 8
+                // total is 7. expected 1 to be hide then total item should be 6
+                assert.equal(totalChild, 6, 'valid option menu item.');
+                //assert.equal(element.$.overflowDropdown.invisible, false, 'valid overflow menu item');
+                for (var i =0; i < optionMenu.$.listbox.children.length; i++) {
+                    console.log(optionMenu.$.listbox.children[i].localName);
+                }
+                assert.equal(optionMenu.$.listbox.children.length, 3, 'at least one item is alway hide');
+                done();
+            }, 50);
+        });
+
+
+
+    });
+    </script>
+</body>
+</html>
