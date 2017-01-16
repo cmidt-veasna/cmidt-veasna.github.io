@@ -1,0 +1,43 @@
+<html><head><link rel="import" href="../polymer/polymer.html">
+<link rel="import" href="../iron-flex-layout/iron-flex-layout.html">
+<link rel="import" href="../iron-icon/iron-icon.html">
+<link rel="import" href="cmidt-option-menu-item-behavior.html">
+<link rel="import" href="cmidt-option-menu-item-shared-style.html">
+
+
+</head><body><dom-module id="cmidt-option-menu-item">
+<template>
+    <style include="cmidt-option-menu-item-shared-styles"></style>
+    <style>
+    .item {
+        @apply(--layout-horizontal);
+        @apply(--layout-center-center);
+        height: 100%;
+    }
+
+    :host[show-title] .item {
+        @apply(--layout-start-justified);
+    }
+
+    iron-icon {
+        --iron-icon-width: var(--inner-item-width);
+        --iron-icon-height: var(--inner-item-height);
+        min-width: var(--inner-item-width);
+        min-height: var(--inner-item-width);
+    }
+
+    span {
+        font-size: 14px;
+        text-transform: uppercase;
+        margin: 0 12px;
+    }
+    </style>
+    <div class="item">
+        <iron-icon id="button" noink="[[noink]]" icon="[[icon]]" disabled="[[disabled]]"></iron-icon>
+        <span id="title" hidden="[[!_shouldShowTitle(showTitle, title)]]">[[title]]</span>
+    </div>
+</template>
+
+<script>Polymer({is:"cmidt-option-menu-item",behaviors:[Cmidt.OptionMenuItemBehavior],animatableElement:function(){return this.$.button},onDefineAnimationDefinition:function(i){i.visible.push({name:"fade-in-animation",node:this.$.title,timing:{duration:420}}),i.invisible.push({name:"fade-out-animation",node:this.$.title,timing:{duration:420}})},_shouldShowTitle:function(i,n){return i&&n}});</script>
+</dom-module>
+</body></html>

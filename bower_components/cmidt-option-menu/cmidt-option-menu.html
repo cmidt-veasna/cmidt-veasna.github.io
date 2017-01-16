@@ -1,0 +1,167 @@
+<html><head><link rel="import" href="../polymer/polymer.html">
+<link rel="import" href="../iron-flex-layout/iron-flex-layout.html">
+<link rel="import" href="../iron-dropdown/iron-dropdown.html">
+<link rel="import" href="../neon-animation/neon-animations.html">
+<link rel="import" href="../paper-styles/shadow.html">
+<link rel="import" href="cmidt-option-menu-behavior.html">
+<link rel="import" href="cmidt-option-menu-item-behavior.html">
+<link rel="import" href="cmidt-option-menu-item.html">
+<link rel="import" href="cmidt-option-menu-switchable-item.html">
+<link rel="import" href="animation/cmidt-grow-animation.html">
+
+
+
+</head><body><dom-module id="cmidt-option-menu">
+<template>
+    <style>
+    :host {
+        display: block;
+        position: relative;
+        overflow: hidden;
+        @apply(--cmidt-option-menu);
+    }
+
+    :host[orientation="horizontal"] {
+        @apply(--layout-horizontal);
+    }
+
+    :host[orientation="vertical"] {
+        @apply(--layout-vertical);
+        display: inline-flex;
+    }
+
+    :host[align="right"] {
+        @apply(--layout-end-justified);
+    }
+
+    :host[align="bottom"] {
+        @apply(--layout-end);
+    }
+
+    :host[align="left"] {
+        @apply(--layout-start-justified);
+    }
+
+    :host[align="top"] {
+        @apply(--layout-start);
+    }
+
+    :host[align="left"] #overflowButton, :host[align="top"] #overflowButton {
+        order: 0;
+        @apply(--cmidt-option-menu-overlow-order);
+    }
+
+    :host[align="right"] #overflowButton, :host[align="bottom"] #overflowButton {
+        order: 1000;
+        @apply(--cmidt-option-menu-overlow-order);
+    }
+
+    #dropdown {
+        width: auto;;
+        height: auto;
+        overflow: inherit;
+        min-width: inherit;
+        min-height: inherit;
+    }
+
+    :host ::content > * {
+        /*order: 1;*/
+    }
+
+    #overflowButton, :host ::content > * {
+        width: var(--cmidt-option-menu-item-size, 40px);
+        height: var(--cmidt-option-menu-item-size, 40px);
+        min-width: var(--cmidt-option-menu-item-size, 40px);
+        min-height: var(--cmidt-option-menu-item-size, 40px);
+        overflow: hidden;
+    }
+
+    .show-item, :host ::content > .show-item {
+        /* 0 does not work so we have to use a small number */
+        /* Start our small */
+        width: 0;
+        min-width: 0;
+        opacity: 0;
+        transform: scale(0,0);
+
+        -webkit-animation: widthGrow 250ms ease forwards, itemAppear 250ms ease-in-out 100ms forwards;
+        -o-animation: widthGrow 250ms ease forwards, itemAppear 250ms ease-in-out 100ms forwards;
+        animation: widthGrow 250ms ease forwards, itemAppear 250ms ease-in-out 100ms forwards;
+    }
+
+    .hide-item, :host ::content > .hide-item {
+        width: var(--cmidt-option-menu-item-size, 40px);
+        min-width: var(--cmidt-option-menu-item-size, 40px);
+        opacity: 1;
+        transform: scale(1,1);
+
+        -webkit-animation: itemDisappear 250ms ease-in-out forwards, widthShrink 200ms ease 150ms forwards;
+        -o-animation: itemDisappear 250ms ease-in-out forwards, widthShrink 200ms ease 150ms forwards;
+        animation: itemDisappear 250ms ease-in-out forwards, widthShrink 200ms ease 150ms forwards;
+    }
+
+    @-webkit-keyframes itemDisappear {
+        to { opacity: 0; transform: scale(0,0); }
+    }
+    @-o-keyframes itemDisappear {
+        to { opacity: 0; transform: scale(0,0); }
+    }
+    @keyframes itemDisappear {
+        to { opacity: 0; transform: scale(0,0); }
+    }
+
+    @-webkit-keyframes widthShrink {
+        to { width: 0; min-width:0; }
+    }
+    @-o-keyframes widthShrink {
+        to { width: 0; min-width:0; }
+    }
+    @keyframes widthShrink {
+        to { width: 0; min-width:0; }
+    }
+
+    @-webkit-keyframes itemAppear {
+        to { opacity: 1; transform: scale(1,1); }
+    }
+    @-o-keyframes itemAppear {
+        to { opacity: 1; transform: scale(1,1); }
+    }
+    @keyframes itemAppear {
+        to { opacity: 1; transform: scale(1,1); }
+    }
+
+    @-webkit-keyframes widthGrow {
+        to { width: var(--cmidt-option-menu-item-size, 40px); min-width: var(--cmidt-option-menu-item-size, 40px); }
+    }
+    @-o-keyframes widthGrow {
+        to { width: var(--cmidt-option-menu-item-size, 40px); min-width: var(--cmidt-option-menu-item-size, 40px); }
+    }
+    @keyframes widthGrow {
+        to { width: var(--cmidt-option-menu-item-size, 40px); min-width: var(--cmidt-option-menu-item-size, 40px); }
+    }
+
+    #dropdown {
+        padding: 2px;
+    }
+
+    #listbox {
+        @apply(--layout-verical);
+        @apply(--shadow-elevation-2dp);
+        background-color: white;
+    }
+
+    #listbox ::content > cmidt-option-menu-item, #listbox ::content > cmidt-option-menu-switchable-item {
+        color: black;
+    }
+    </style>
+    <content></content>
+    <cmidt-option-menu-item id="overflowButton" title="overflow" class="dropdown-trigger" on-tap="_handleOverflowTap" icon="[[_getOverflowIcon(orientation, overflow)]]" hidden="[[!_overflow]]" invisible="[[!_overflow]]"></cmidt-option-menu-item>
+    <iron-dropdown id="dropdown" vertical-align="[[_getDropdownVerticalAlign(orientation, align, overflowVerticalAlign)]]" horizontal-align="[[_getDropdownHorizontalAlign(orientation, align, overflowHorizontalAlign)]]" open-animation-config="[[_openAnimationConfig]]" close-animation-config="[[_closeAnimationConfig]]">
+        <div id="listbox" class="dropdown-content">
+        </div>
+    </iron-dropdown>
+</template>
+
+<script>Polymer({is:"cmidt-option-menu",behaviors:[Cmidt.OptionMenuBehavior],properties:{overflow:{type:String,value:""},_openAnimationConfig:{type:Array,value:function(){var t=this;return[{name:"fade-in-animation",timing:{delay:150,duration:50}},{name:"cmidt-grow-animation",verticalAlign:function(){return t._getVerticalAlignment()},horizontalAlign:function(){return t._getHorizontalAlignment()},timing:{delay:150,duration:200}}]}},_closeAnimationConfig:{type:Array,value:function(){return[{name:"fade-out-animation",timing:{duration:200}}]}}},listeners:{"overflow-item-tap":"_handleOverflowItemTap"},_getVerticalAlignment:function(){return this._getDropdownVerticalAlign(this.orientation,this.align,this.overflowVerticalAlign)},_getHorizontalAlignment:function(){return this._getDropdownHorizontalAlign(this.orientation,this.align,this.overflowHorizontalAlign)},_getOverflowIcon:function(t,e){return e?e:"horizontal"==t?"icons:more-vert":"icons:more-horiz"},_getDropdownVerticalAlign:function(t,e,i){return"vertical"==t?e:i},_getDropdownHorizontalAlign:function(t,e,i){return"horizontal"==t?e:i},_handleOverflowTap:function(t){this.$.dropdown.open()},_handleOverflowItemTap:function(t){this.$.dropdown.close()},_onOverflowItemsChange:function(t){this.$.dropdown.close()},toggleMenuItemVisibility:function(t){t._isInvisible?this.showMenuItem(t):this.hideMenuItem(t)},showMenuItem:function(t){this.toggleClass("hide-item",!1,t),this.toggleClass("show-item",!0,t),t._isInvisible=!1},hideMenuItem:function(t){this.toggleClass("show-item",!1,t),this.toggleClass("hide-item",!0,t),t._isInvisible=!0},addMenuItem:function(t,e){var i=Polymer.dom(this.$.listbox),n=i.querySelector("#"+t.id);n&&i.removeChild(n);var o=Polymer.dom(this);if(!t.classList.contains("show-item")&&!o.querySelector("#"+t.id)){var s=o.querySelector(":scope > :nth-child("+e+")");this._menuItems&&e==this._menuItems.length-1||!s?o.appendChild(t):o.insertBefore(t,s),this.toggleClass("hide-item",!1,t),this.toggleClass("show-item",!0,t),this._listenCssAnimaton(t,"AnimationEnd","_onItemAppeared")}},removeMenuItem:function(t){!t.classList.contains("hide-item")&&Polymer.dom(this).querySelector("#"+t.id)&&(this._shouldAnimate?(this.toggleClass("show-item",!1,t),this.toggleClass("hide-item",!0,t),this._listenCssAnimaton(t,"AnimationEnd","_onItemDisappeared")):this._addToOverflow(t))},_getItemSize:function(){return this.children[0].getBoundingClientRect().width||this.$.overflowButton.getBoundingClientRect().width},_onItemAppeared:function(t){this._unlistenCssAnimaton(t.target,"AnimationEnd","_onItemAppeared"),this.toggleClass("show-item",!1,t.target)},_onItemDisappeared:function(t){t.target._isMenuItem&&(this._unlistenCssAnimaton(t.target,"AnimationEnd","_onItemDisappeared"),this._addToOverflow(t.target),this.toggleClass("hide-item",!1,t.target))},_addToOverflow:function(t){if(Polymer.dom(this).removeChild(t),this._overflowItems)for(var e=0;e<this._overflowItems.length;e++)if(this._overflowItems[e]==t){Polymer.dom(this.$.listbox).appendChild(t),t.showTitle=!0;break}},_listenCssAnimaton:function(t,e,i){for(var n=["webkit","moz","MS","o",""],o=0;o<n.length;o++)n[o]||(e=e.toLowerCase()),this.listen(t,n[o]+e,i)},_unlistenCssAnimaton:function(t,e,i){for(var n=["webkit","moz","MS","o",""],o=0;o<n.length;o++)n[o]||(e=e.toLowerCase()),this.unlisten(t,n[o]+e,i)}});</script>
+</dom-module>
+</body></html>

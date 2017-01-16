@@ -1,0 +1,181 @@
+<html><head><link rel="import" href="../polymer/polymer.html">
+<link rel="import" href="../iron-scroll-target-behavior/iron-scroll-target-behavior.html">
+<link rel="import" href="../iron-scroll-threshold/iron-scroll-threshold.html">
+<link rel="import" href="../iron-icon/iron-icon.html">
+<link rel="import" href="../iron-flex-layout/iron-flex-layout.html">
+<link rel="import" href="../iron-resizable-behavior/iron-resizable-behavior.html">
+<link rel="import" href="../iron-selector/iron-selector.html">
+<link rel="import" href="../paper-icon-button/paper-icon-button.html">
+
+<link rel="import" href="cmidt-viewpager-icons.html">
+
+
+</head><body><dom-module id="cmidt-viewpager">
+    <template>
+    <style>
+    :host {
+        display: block;
+        overflow: hidden;
+        position: relative;
+
+        --iron-item-space: var(--cmidt-page-indicator-space, 4px);
+
+        --iron-normal-size: var(--cmidt-page-indicator-size, 10px);
+        --iron-selected-size: var(--cmidt-page-indicator-selected-size, 18px);
+
+        --iron-padding-size: calc((var(--iron-item-space) / 2) + ((var(--iron-selected-size) - var(--iron-normal-size)) / 2));
+        --iron-padding-selected-size: var(--iron-item-space);
+
+        --iron-item-control-size: var(--cmidt-control-size, 60px);
+    }
+
+    iron-scroll-threshold {
+        width: 100%;
+        height: 100%;
+    }
+
+    #container {
+        position: relative;
+        overflow-x: scroll;
+        overflow-y: hidden;
+        -ms-overflow-style: none;
+        height: calc(100% + 16px);
+        padding-bottom: 16px;
+        box-sizing: border-box;
+    }
+
+    #container::-webkit-scrollbar {
+        display: none;
+    }
+
+    #container > ::content > * {
+        margin: 0;
+        box-sizing: border-box;
+        will-change: transform;
+        padding-left: var(--cmidt-page-margin, 0px);
+        padding-right: var(--cmidt-page-margin, 0px);
+        @apply(--layout-fit);
+        @apply(--cmidt-page);
+    }
+
+    #container > ::content > .be-animated {
+        -webkit-transition: opacity 180ms, -webkit-transform 320ms; /* Safari */
+        transition: opacity 180ms, transform 320ms;
+    }
+
+    #container > ::content > .be-animated-opacity {
+        -webkit-transition: opacity 420ms; /* Safari */
+        transition: opacity 420ms;
+    }
+
+    :host[auto-padding] #container > ::content > * {
+        padding-left: calc(8px + var(--iron-item-control-size));
+        padding-right: calc(8px + var(--iron-item-control-size));
+    }
+
+    #clipping {
+        box-sizing: border-box;
+        width: 100%;
+        height: 100%;
+    }
+
+    :host[clip-padding] #clipping {
+        width: calc(100% - 16px - (2 * var(--iron-item-control-size)));
+        margin-left: calc(8px + var(--iron-item-control-size));
+    }
+
+    /* Indicator style */
+    #indicator {
+        color: var(--cmidt-page-indicator-color, black);
+        left: 50%;
+        bottom: 0;
+        transform: translate(-50%, 0);
+        @apply(--layout-horizontal);
+        @apply(--layout-center-center);
+        @apply(--cmidt-page-indicator);
+        position: absolute;
+    }
+
+    .indicator-item {
+        width: var(--iron-selected-size);
+        height: var(--iron-selected-size);
+        padding: var(--iron-padding-size);
+        @apply(--layout-horizontal);
+        @apply(--layout-center-center);
+        position: relative;
+        box-sizing:border-box;
+        cursor: pointer;
+        transition: padding 80ms ease-in-out;
+    }
+
+    .indicator-item.iron-selected {
+        padding: var(--iron-padding-selected-size);
+        color: var(--cmidt-page-indicator-selected-color, #857376);
+    }
+
+    .indicator-item iron-icon {
+        width: 100%;
+        height: 100%;
+    }
+
+    /* Controller */
+    .control {
+        top: 50%;
+        transform: translate(0, -50%);
+        position: absolute;
+        cursor: pointer;
+        padding: 10px;
+        color: var(--cmidt-control-color, white);
+        width: var(--iron-item-control-size);
+        height: var(--iron-item-control-size);
+        -moz-border-radius: var(--iron-item-control-size);
+        -webkit-border-radius: var(--iron-item-control-size);
+        border-radius: var(--iron-item-control-size);
+        background-color: var(--cmidt-control-background, rgba(0, 0, 0, 0.08));
+        transition: background-color 0.5s linear, visibility 0.5s linear;
+        @apply(--cmidt-page-control);
+    }
+
+    #next {
+        right: 0;
+        @apply(--cmidt-page-control-next);
+    }
+
+    #previous {
+        left: 0;
+        @apply(--cmidt-page-control-previous);
+    }
+
+    .control:hover {
+        background-color: var(--cmidt-control-hover-background, rgba(0, 0, 0, 0.5));
+    }
+
+    .control.hide {
+        visibility: hidden;
+    }
+    </style>
+
+    <div id="clipping">
+        <iron-scroll-threshold id="threshold" horizontal="">
+            <div id="container">
+                <content></content>
+            </div>
+        </iron-scroll-threshold>
+    </div>
+
+    
+    <paper-icon-button id="previous" class="control" on-click="_onPreviousClick" icon="cmidt-viewpager:arrow-previous" hidden$="[[hide-control]]"></paper-icon-button>
+    <paper-icon-button id="next" class="control" on-click="_onNextClick" icon="cmidt-viewpager:arrow-next" hidden$="[[hide-control]]"></paper-icon-button>
+    
+    <iron-selector id="indicator" selected="{{_currentItemInternal}}" hidden$="[[hide-indicator]]">
+        <template is="dom-repeat" items="[[_indicatorItem]]">
+            <div class="indicator-item">
+                <iron-icon icon="cmidt-viewpager:disc"></iron-icon>
+            </div>
+        </template>
+    </iron-selector>
+</template>
+
+<script>var Cmidt=Cmidt||{};Cmidt.PAGE_STATE_IDLE=0,Cmidt.PAGE_STATE_DRAGGED=1,Cmidt.PAGE_STATE_SCROLLING=2,Cmidt.PAGE_STATE_SETTLING=3,function(){var t=180,e=2.5;Polymer({is:"cmidt-viewpager",behaviors:[Polymer.IronScrollTargetBehavior,Polymer.Templatizer,Polymer.IronResizableBehavior],properties:{items:{type:Array},as:{type:String,value:"item"},indexAs:{type:String,value:"index"},pageOffset:{type:Number,value:1},bounce:{type:Boolean,value:!1},hideIndicator:{type:Boolean,value:!1,reflectToAttribute:!0},hideControl:{type:Boolean,value:!1,reflectToAttribute:!0},currentItem:{type:Number,value:0,reflectToAttribute:!0},autoPadding:{type:Boolean,value:!1,reflectToAttribute:!0},clipPadding:{type:Boolean,value:!1,reflectToAttribute:!0},enableExtraEvent:{type:Boolean,value:!1,reflectToAttribute:!0},_currentItemInternal:{type:Number,value:0},_indicatorItem:{type:Array}},_viewportHeight:0,_viewportWidth:0,_scrollableWidth:0,_scrollPosition:0,_scrollDirection:0,_touchDragScrollPosition:0,_populateOffset:0,_isPopulating:!1,_nextPositionOffset:0,_state:0,_attachedItems:null,_reusableItems:null,_indicatorSize:0,_isTouched:!1,_removeTransitions:null,_isAnimated:!1,_scrollFinishedHandler:null,_shouldStopWheelPropagation:!1,_animationFrameRequestID:null,_isBeingDragged:!0,_lastDelta:0,_startTrackTime:0,_hasFireScrolling:!1,_shouldFireSelectedEvent:!1,_hasTemplate:!1,observers:["_onItemsChanged(items.*)","_onCurrentItemChanged(currentItem)","_onCurrentItemInternalChanged(_currentItemInternal)","_onHideControlChanged(hideControl)","_onHideIndicatorChanged(hideIndicator)"],listeners:{touchmove:"_onTouchMove",touchstart:"_onTouchStart",touchend:"_onTouchEnd",down:"_onDown",up:"_onUp",transitionend:"_onCssTransitionEnd","iron-resize":"_onResizeHandler"},ready:function(){this.scrollTarget=this.$.container,this.$.threshold.scrollTarget=this.$.container},attached:function(){if(this.updateViewportBoundaries(),this.items&&this.items.length>0)this._populate(),this._populateIndicator();else if(this.$.container.children.length>0){var t=this.$.container.children;this._indicatorItem=[],this._attachedItems=this._attachedItems||[];for(var e=0;e<t.length;e++)if("template"!=t[e].localName){var i={};i.position=e,i.object=t[e],i.scrolling=!1,i.template=!1,this._attachedItems.push(i),this.push("_indicatorItem",e),this.translate3d(e*this._viewportWidth+"px",0,0,i.object)}}},_forwardInstanceProp:function(t,e,i){},_forwardInstancePath:function(t,e,i){},_forwardParentProp:function(t,e){},_forwardParentPath:function(t,e){},_forwardItemPath:function(t,e){for(var i=t.indexOf("."),s=t.substring(1,i<0?t.length:i),n=null,h=0;h<this._attachedItems.length;h++)if(this._attachedItems[h].position==s){n=this._attachedItems[h];break}n&&(i>=0?(t=this.as+"."+t.substring(i+1),n.object._templateInstance.notifyPath(t,e,!0)):n.object._templateInstance[this.as]=e)},get _isVisible(){return Boolean(this.offsetWidth||this.offsetHeight)},_onItemsChanged:function(t){if(this.updateViewportBoundaries(),"items"===t.path)this._physicalIndexForKey={},this._attachedItems=this._attachedItems||[],this._reusableItems=this._reusableItems||[],0!=this._viewportWidth&&0!=this._viewportHeight&&(0!=this.currentItem?(this.currentItem=0,this._currentItemInternal=0):this._onCurrentItemChanged(),0!=this._scrollLeft&&this._scrollPageTo(0,!1,!1),this._populate(!0),this._populateIndicator(),this.toggleClass("hide",0==this.currentItem,this.$.previous),this.toggleClass("hide",this.currentItem==this.items.length-1,this.$.next));else if("items.splices"===t.path){if(0!=this._viewportWidth&&0!=this._viewportHeight){var e=t.value.indexSplices[0],i=!1;if(e.removed&&e.removed.length>0){if(this._needRemoveAnimation(e))return;e.index<this.currentItem?(this._setCurrentItemInternal(this.currentItem-e.removed.length,!0,!0),this._invalideAttachedContent(),i=!0):this.currentItem+this.pageOffset<=e.index&&(i=!0)}else if(e.addedCount>0){if(this._needAddAnimation(e))return;e.index<=this.currentItem+this.pageOffset&&(e.index<this.currentItem&&(this._setCurrentItemInternal(this.currentItem+e.addedCount,!0,!0),this._invalideAttachedContent()),i=!0)}this._rePopulateItemOnSplice(i,!i)}}else this._forwardItemPath(t.path.split(".").slice(1).join("."),t.value)},_needRemoveAnimation:function(t){if(0==this.items.length){var e=this._getVisibleAttachedItem();if(e!=-1){var i=this._attachedItems[e];this.toggleClass("be-animated",!0,i.object),i.object.style.opacity=0,this.translate3d(this.currentItem*this._viewportWidth+"px",this._viewportHeight+"px",0,i.object)}return this._removeTransitions={moveIn:i,moveOut:i,removedSize:t.removed.length},!0}if(t.index==this.currentItem||this.currentItem<t.index+t.removed.length){var e=this._getVisibleAttachedItem();if(e!=-1){var s,n,i=this._attachedItems[e];t.index>=this.items.length?(n=!1,s=this._attachedItems[e-1]):(n=!0,s=this._attachedItems[e+1]);var h;n?(h=t.index,this._rebindReusableItem(s,s.object._templateInstance,t.index)):(h=t.index-1,this._rebindReusableItem(s,s.object._templateInstance,h)),this.toggleClass("be-animated",!0,i.object),this.toggleClass("be-animated",!0,s.object),i.object.style.opacity=0,this.translate3d(this.currentItem*this._viewportWidth+"px",this._viewportHeight+"px",0,i.object),this.translate3d(this.currentItem*this._viewportWidth+"px",0,0,s.object),this._removeTransitions={moveIn:s,moveOut:i,rebindIndex:h,removedSize:t.removed.length}}return!0}return!1},_needAddAnimation:function(t){if(this.currentItem==t.index){var e=this._getVisibleAttachedItem();e==-1&&0==this._attachedItems.length&&(this._addNewItem(0,-1),e=0);var i=this._attachedItems[e],s=e==this._attachedItems.length-1?this._attachedItems[e-1]:this._attachedItems[e+1];return s||2!=this.items.length||1!=this._attachedItems.length?1==this.items.length&&(s=i):(this._addNewItem(this.currentItem+1,-1),s=this._attachedItems[1]),this._rebindReusableItem(s,s.object._templateInstance,this.currentItem),s.object.style.opacity=0,this.translate3d(this.currentItem*this._viewportWidth+"px",0,0,s.object),s!=i&&(this.toggleClass("be-animated",!0,i.object),this.translate3d((this.currentItem+1)*this._viewportWidth+"px",0,0,i.object)),this.async(function(){this.toggleClass("be-animated-opacity",!0,s.object),s.object.style.opacity=1},120),this._removeTransitions={moveIn:s,moveOut:i,rebindIndex:this.currentItem,addedSize:t.addedCount},!0}return!1},_rePopulateItemOnSplice:function(t,e){e||(this._populate(t),this._onCurrentItemChanged()),this._populateIndicator(),this.toggleClass("hide",0==this.currentItem,this.$.previous),this.toggleClass("hide",this.currentItem==this.items.length-1,this.$.next)},_invalideAttachedContent:function(){for(var t,e=0;e<this._attachedItems.length;e++)t=this._attachedItems[e],t.position=-1},_getVisibleAttachedItem:function(){for(var t=0;t<this._attachedItems.length;t++)if(this._attachedItems[t].position==this.currentItem)return t;return-1},_onCurrentItemChanged:function(t){this._shouldFireSelectedEvent&&this.fire("page-selected",{position:this.currentItem}),this._shouldFireSelectedEvent=!0},_onCurrentItemInternalChanged:function(t){this._currentItemInternal!=this.currentItem&&this._setCurrentItemInternal(this._currentItemInternal)},_onHideControlChanged:function(){this.$.next.hidden=this.hideControl,this.$.previous.hidden=this.hideControl},_onHideIndicatorChanged:function(){this.$.indicator.hidden=this.hideIndicator},_ensureTemplatized:function(){if(!this.ctor){var t={};if(t[this.as]=!0,t[this.indexAs]=!0,this._instanceProps=t,this._userTemplate=Polymer.dom(this).querySelector("template"),!this._userTemplate)return console.warn("cmidt-viewpager requires a template to be provided in light-dom"),!1;this.templatize(this._userTemplate),this._hasTemplate=!0}return!0},_onPreviousClick:function(){this._setCurrentItemInternal(this.currentItem-1)},_onNextClick:function(){this._setCurrentItemInternal(this.currentItem+1)},_onTouchMove:function(t){this._isBeingDragged&&t.preventDefault()},_onTouchStart:function(t){this._isBeingDragged=!0,this.listen(this,"track","_onTrack"),this.$.container.style["overflow-x"]="hidden"},_onTouchEnd:function(t){this.unlisten(this,"track","_onTrack"),this.$.container.style["overflow-x"]="scroll"},_onTrack:function(t){if(!this._removeTransitions)switch(t.detail.state){case"start":this._startTrackTime=Date.now(),this._touchDragScrollPosition=this._scrollLeft;break;case"track":if(this._isBeingDragged&&this._isTrackUnderViewPager(t.detail.hover())){var e=Math.abs(t.detail.dx),i=Math.abs(t.detail.dy);if(i>20&&i>e)return this._isBeingDragged=!1,void this.unlisten(this,"track","_onTrack");this._hasBeenFireDragged||(this._hasBeenFireDragged=!0,this.fire("page-state-changed",{state:Cmidt.PAGE_STATE_DRAGGED}),this._state=Cmidt.PAGE_STATE_DRAGGED),this._lastDelta=t.detail.dx,this._move(this._lastDelta),t.stopPropagation(),t.preventDefault()}break;case"end":if(this._isBeingDragged){var s=Date.now()-this._startTrackTime,n=this._lastDelta/s;this._settleViewPosition(n)}this._hasBeenFireDragged=null,this._isBeingDragged=!0,this._touchDragScrollPosition=0}},_onDown:function(t){var e=t.target.localName;"paper-icon-button"!=e&&"iron-icon"!=e&&(this._isTouched=!0,this._cancelAnimationFrame())},_onUp:function(t){var e=t.target.localName;"paper-icon-button"!=e&&"iron-icon"!=e&&(this._onScrollFinished(),this._isTouched=!1,this._hasBeenFireDragged=null,this._isBeingDragged=!0,this._touchDragScrollPosition=0)},_onCssTransitionEnd:function(t){if(this._removeTransitions&&t.target==this._removeTransitions.moveIn.object)if("transform"==t.propertyName)if(0==this.items.length)this._rePopulateItemOnSplice(!1);else{var e=this._removeTransitions.moveIn,i=this._removeTransitions.moveOut,s=this._removeTransitions.rebindIndex;this._removeTransitions.removedSize;this._rebindReusableItem(i,i.object._templateInstance,s),this.toggleClass("be-animated",!1,e.object),this.toggleClass("be-animated",!1,i.object),i.object.style.opacity=1,this._removeTransitions=null,this._invalideAttachedContent(),this._setCurrentItemInternal(s,!0,!0),this._rePopulateItemOnSplice(!0)}else if("opacity"==t.propertyName){var e=this._removeTransitions.moveIn,i=this._removeTransitions.moveOut,s=this._removeTransitions.rebindIndex;this._removeTransitions.addedSize;this._invalideAttachedContent(),this._rebindReusableItem(i,i.object._templateInstance,s),this.toggleClass("be-animated-opacity",!1,e.object),this.toggleClass("be-animated",!1,i.object),this._removeTransitions=null,this._rePopulateItemOnSplice(!1)}},_onResizeHandler:function(t){if(this.updateViewportBoundaries(),this._attachedItems&&this._viewportWidth>0){for(var e,i=0;i<this._attachedItems.length;i++)e=this._attachedItems[i],this.translate3d(e.position*this._viewportWidth+"px",0,0,e.object);this._setCurrentItemInternal(this.currentItem,!0,!0)}},_onAnimationFinish:function(){this.fire("page-state-changed",{state:Cmidt.PAGE_STATE_IDLE}),this._state=Cmidt.PAGE_STATE_IDLE},_scrollHandler:function(){var e=Math.max(0,Math.min(this._scrollableWidth,this._scrollLeft)),i=Math.abs(e/this._viewportWidth);if(!this._isPopulating&&this._hasTemplate&&i>this._populateOffset){var s=e-this._scrollPosition,n=parseInt(e/this._viewportWidth),h=s<0||e%this._viewportWidth==0?n:n+1;this._nextPage!=h&&(this._nextPage=h,this._populateWith(h))}this._scrollDirection=e-this._scrollPosition,this._scrollPosition=e,this._scrollPosition<this._viewportWidth?(this.toggleClass("hide",!0,this.$.previous),this.toggleClass("hide",!1,this.$.next)):this._scrollPosition>this._scrollableWidth-this._viewportWidth?(this.toggleClass("hide",!1,this.$.previous),this.toggleClass("hide",!0,this.$.next)):(this.toggleClass("hide",!1,this.$.previous),this.toggleClass("hide",!1,this.$.next)),this._isTouched||this._isAnimated||(this._scrollFinishedHandler&&this.cancelAsync(this._scrollFinishedHandler),this._scrollFinishedHandler=this.async(this._onScrollFinished,t)),this._isTouched||this._hasFireScrolling||(this._hasFireScrolling=!0,this.fire("page-state-changed",{state:Cmidt.PAGE_STATE_SCROLLING}),this._state=Cmidt.PAGE_STATE_SCROLLING)},_onScrollFinished:function(){var t=Math.max(0,Math.min(this._scrollableWidth,this._scrollLeft)),e=t%this._viewportWidth,i=parseInt(t/this._viewportWidth),s=e>this._nextPositionOffset&&this._scrollDirection>0?i+1:i;this._setCurrentItemInternal(s),this._hasFireScrolling=!1},_settleViewPosition:function(t){if(this._attachedItems){var e=this._scrollLeft/this._viewportWidth,i=parseInt(Math.abs(e)),s=t<0?i+1:i;this._setCurrentItemInternal(s)}},_move:function(t){var e=this._touchDragScrollPosition-t,i=Math.min(this._scrollableWidth,Math.max(0,e)),s=i;return this.bounce&&(e<0||e>this._scrollableWidth),this.scroll(s,this._scrollTop),!1},_rebindReusableItem:function(t,e,i){var s=this.items&&this.items[i];null!=s?(e[this.as]=s,e[this.indexAs]=i,t.object.removeAttribute("hidden")):t.object.setAttribute("hidden","")},_addNewItem:function(t,e){if(this._ensureTemplatized()){var i,s,n=!1;this._reusableItems&&this._reusableItems.length>0?(i=this._reusableItems.pop(),s=i.object._templateInstance,this.toggleClass("be-animated",!1,i.object),this.toggleClass("be-animated-opacity",!1,i.object),i.object.style.opacity=1,n=!0):(s=this.stamp(null),i={},i.object=s.root.querySelector("*")),i.position=t,i.scrolling=!1,i.template=!0,this._rebindReusableItem(i,s,t),this._attachedItems||(this._attachedItems=[]),e<0?this._attachedItems.push(i):this._attachedItems.splice(e,0,i),Polymer.dom(this.$.container).appendChild(n?i.object:s.root),this.translate3d(t*this._viewportWidth+"px",0,0,i.object),this.enableExtraEvent&&this.fire("page-attached",{item:{position:i.position,object:i.object},reuabele:n})}},_populateIndicator:function(){if(this.items)if(0==this.items.length&&this._indicatorItem)this.splice("_indicatorItem",0,this._indicatorItem.length);else{var t=this._viewportWidth-64,e=0;this._indicatorItem=[];for(var i=0;i<this.items.length&&(e+=this._indicatorSize,e<t);i++)this.push("_indicatorItem",i)}},_populate:function(t){this._populateWith(this.currentItem,t)},_populateWith:function(t,e){this._isPopulating=!0;var i,s=Math.max(0,t-this.pageOffset),n=Math.min(this.items.length-1,t+this.pageOffset),h=-1;if(this._attachedItems)for(var o=0;o<this._attachedItems.length;o++){if(i=this._attachedItems[o],(i.position<s||i.position>n)&&!i.scrolling)this._attachedItems.splice(o,1),Polymer.dom(this.$.container).removeChild(i.object),this._reusableItems.push(i),o--,this.enableExtraEvent&&this.fire("page-detached",{item:{position:i.position,object:i.object}});else if(e&&s<=i.position&&i.position<=n)this._rebindReusableItem(i,i.object._templateInstance,i.position);else if(h<n&&i.position>s)for(h++,h<s&&(h=s);h<=n&&h<i.position;)this._addNewItem(h,o),h++,o++;h=i.position}if(h=this._attachedItems&&this._attachedItems.length>0?this._attachedItems[this._attachedItems.length-1].position:-1,h<n)for(h++,h=h>s?h:s;h<=n;)this._addNewItem(h,-1),h++;this._isPopulating=!1},_setCurrentItemInternal:function(t,e,i){if(!this._removeTransitions&&(this.items||this.$.container.children.length)&&0!=this._viewportWidth&&0!=this._viewportHeight){var s=this.items?this.items.length:this.$.container.children.length;t<0?t=0:t>=s&&(t=s-1),this.currentItem!=t?(this.currentItem=t,this._currentItemInternal=t,this._scrollPageTo(t*this._viewportWidth,!e,!i)):this._scrollPosition%this._viewportWidth==0&&this._scrollPosition==this._scrollLeft||this._scrollPageTo(t*this._viewportWidth,!e,!i)}},_scrollPageTo:function(t,e,i){this._scrollLeftTo=t,this._scrollLeftFrom=this._scrollPosition,this._scrollLeftBy=t-this._scrollPosition,0!=this._scrollLeftBy?e?(this._cancelAnimationFrame(),this._isAnimated=!0,this._animationFrameRequestID=requestAnimationFrame(this._animationFrameUpdate.bind(this))):this.scroll(this._scrollLeftTo,this._scrollTop):(this._shouldStopWheelPropagation=!0,this._scrollLeftTo!=this._scrollLeft&&this.scroll(this._scrollLeftTo,this._scrollTop)),i&&(this.fire("page-state-changed",{state:Cmidt.PAGE_STATE_SETTLING}),this._state=Cmidt.PAGE_STATE_SETTLING)},_animationFrameUpdate:function(t){if(this._isAnimated){this._startTime||(this._startTime=t);var i=this._scrollLeftBy*e*((t-this._startTime)/1e3),s=this._scrollLeftFrom+i;if(Math.abs(i)>=Math.abs(this._scrollLeftBy))return this.scroll(this._scrollLeftTo,this._scrollTop),this._startTime=null,cancelAnimationFrame(this._animationFrameRequestID),void this.async(function(){this._isAnimated=!1,this._onAnimationFinish()},100);this.scroll(s,this._scrollTop),this._animationFrameRequestID=requestAnimationFrame(this._animationFrameUpdate.bind(this))}},_cancelAnimationFrame:function(){this._animationFrameRequestID&&(cancelAnimationFrame(this._animationFrameRequestID),this._isAnimated=!1,this._animationFrameRequestID=null,this._startTime=null,this.scroll(this._scrollLeft,this._scrollTop))},_isTrackUnderViewPager:function(t){for(;t;){if(t==this)return!0;t=t.parentNode}return!1},setCurrentItem:function(t,e){this._shouldFireSelectedEvent=!e,this._setCurrentItemInternal(t)},clearTriggers:function(){this.$.threshold.clearTriggers()},updateViewportBoundaries:function(){var t=window.getComputedStyle(this);this._isRTL=Boolean("rtl"===t.direction),this._viewportWidth=this.offsetWidth,this._viewportHeight=this.offsetHeight,this._populateOffset=2/3,this._nextPositionOffset=.4*this._viewportWidth,this.items?this._scrollableWidth=this._viewportWidth*(this.items.length-1):this.$.container.children.length>0&&(this._scrollableWidth=this._viewportWidth*(this.$.container.children.length-1)),this._indicatorSize=parseFloat(this.getComputedStyleValue("--iron-selected-size"))+2*parseFloat(this.getComputedStyleValue("--iron-item-space"))}})}();</script>
+</dom-module>
+</body></html>

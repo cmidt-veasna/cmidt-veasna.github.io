@@ -1,0 +1,43 @@
+<html><head><meta charset="UTF-8"><link rel="import" href="../cmidt-open-lib/cmidt-open-lib.html"></head><body><dom-module id="cmidt-about-me">
+<template>
+    <style>
+    :host {
+        display: block;
+        --paper-card-header-color: white;
+        --paper-card-content: {
+            font-size: 13px;
+            line-height: 22px;
+        }
+    }
+    paper-card {
+        margin: 64px 128px 64px 128px;
+    }
+    :host[_small-size] paper-card {
+        margin: 0 0 64px 0;
+    }
+    </style>
+
+    <iron-media-query query="(min-width: 1230px)" query-matches="{{!_smallSize}}"></iron-media-query>
+
+    <paper-card image="/images/cover.jpg" heading="About Me">
+        <div class="card-content">
+            <div>
+                My name Veasna Sreng. I'm living in various place, most of the time I live in Phnom Penh, Cambodia's capital city.
+                I'm graduate in 2010 as a software engineer. Previously I'd been working in a few componay such as Wings,
+                Golden Gekko (Now became DMI), Asiacell.
+                <br><br>
+                I've been working on front-end and backend. Thought implementation of backend and front-end are different,
+                I love being involve in both side and being understand the difficulty and challenging on both side allow me
+                to find a better way to solve problem while keeping thing simple. Challenging and solving problem is my favorite part,
+                sometime it's difficult, however it provide a great deal as I got to discover what I haven't yet to know.
+                <br><br>
+                I love open source communities and love to develop something awesome and amazing.
+            </div>
+        </div>
+    </paper-card>
+
+</template>
+
+<script>Polymer({is:"cmidt-about-me",properties:{_smallSize:{type:Boolean,value:!1,notify:!0,reflectToAttribute:!0}}});</script>
+</dom-module>
+</body></html>

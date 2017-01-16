@@ -1,0 +1,203 @@
+<html><head><meta charset="UTF-8"><link rel="import" href="../cmidt-open-lib/cmidt-open-lib.html"></head><body><dom-module id="cmidt-home">
+<template>
+    <style>
+    :host {
+        display: block;
+        height: 100%;
+        --cmidt-page: {
+            margin-bottom: 38px;
+        }
+        --cmidt-page-control: {
+            margin:16px;
+        }
+    }
+
+    .home-container {
+        @apply(--layout-vertical);
+        height: 100%;
+    }
+
+    #pager {
+        width: 100%;
+        height: 240px;
+        min-height: 240px;
+        margin: auto;
+    }
+    :host[_small-size] #pager {
+        height: 380px;
+        min-height: 380px;
+    }
+
+    .item {
+        padding: 16px !important;
+        overflow: hidden;
+        cursor: pointer;
+        @apply(--layout-horizontal);
+    }
+    :host[_no-margin] .item {
+        --cmidt-page-margin: 0;
+        padding: 0 !important;
+    }
+    :host[_small-size] .item {
+        @apply(--layout-wrap);
+    }
+
+    :host .item .figure, :host .list-item .figure {
+        width: 320px;
+        min-width: 320px;
+        height: 220px;
+    }
+    :host[_small-size] .item .figure {
+        width: 100%;
+        min-width: 320px;
+        height: 220px;
+    }
+    :host[_small-size] .item .info {
+        margin-left: 0;
+    }
+    :host[_no-margin] .item .info {
+        margin: 0 16px;
+    }
+
+    .title {
+        font-size: 16px;
+        font-weight: bold;
+        color: black;
+    }
+    .date {
+        font-size: 11px;
+        color: #5c5c5c;
+        margin: 8px 0 16px 0;
+    }
+    .content {
+        font-size: 13px;
+        color: #6c6c6c;
+    }
+    .info {
+        margin-left: 16px;
+    }
+
+    .list {
+        @apply(--layout-flex);
+        @apply(--layout-horizontal);
+        @apply(--layout-wrap);
+        margin-top: 16px;
+        margin-right: 16px;
+    }
+
+    .list-item {
+        @apply(--layout);
+        @apply(--layout-vertical);
+        @apply(--layout-flex-auto);
+        position: relative;
+        width: 336px;
+        height: 352px;
+        padding: 0 0 0 16px;
+        cursor: pointer;
+    }
+
+    .list-item .figure {
+        width: 100%;
+    }
+
+    .list-item .info {
+        margin-top: 16px;
+        margin-left: 0;
+    }
+
+    @media (max-width: 899px) {
+        .list-item {
+            position: relative;
+            width: 100%;
+        }
+    }
+
+    </style>
+
+    <iron-media-query query="(min-width: 1288px)" query-matches="{{!_singleColumn}}"></iron-media-query>
+    <iron-media-query query="(min-width: 900px)" query-matches="{{!_smallSize}}"></iron-media-query>
+    <iron-media-query query="(min-width: 640px)" query-matches="{{!_noMargin}}"></iron-media-query>
+
+    <div class="home-container">
+        <cmidt-viewpager id="pager">
+            <template>
+                <div class="item" on-click="_onPostClick">
+                    <iron-image class="figure" src="[[item.figure]]" sizing="cover"></iron-image>
+                    <div class="info">
+                        <div class="title">[[item.title]]</div>
+                        <div class="date">[[item.date]]</div>
+                        <div class="content">[[item.content]]</div>
+                    </div>
+                </div>
+            </template>
+        </cmidt-viewpager>
+        <div class="list">
+            <template id="post" is="dom-repeat">
+                <div class="list-item" on-click="_onPostClick">
+                    <iron-image class="figure" src="[[item.figure]]" sizing="cover"></iron-image>
+                    <div class="info">
+                        <div class="title">[[item.title]]</div>
+                        <div class="date">[[item.date]]</div>
+                        <div class="content">[[item.content]]</div>
+                    </div>
+                </div>
+            </template>
+        </div>
+    <div>
+
+</div></div></template>
+
+<script>
+Polymer({
+
+    is: 'cmidt-home',
+
+    properties: {
+        item: {
+            type: Object,
+            observer: "_onNewsChanged"
+        },
+        _smallSize: {
+            type: Boolean,
+            value: false,
+            notify: true,
+            reflectToAttribute: true
+        },
+        _noMargin: {
+            type: Boolean,
+            value: false,
+            notify: true,
+            reflectToAttribute: true
+        },
+        _singleColumn: {
+            type: Boolean,
+            value: false,
+            notify: true,
+            reflectToAttribute: true
+        },
+    },
+
+    _onNewsChanged: function () {
+        var pagerPost = [];
+        var pagerPostIndex = this.item.viewpager;
+        for (var i = 0; i < pagerPostIndex.length; i++) {
+            pagerPost.push(this.item.post[i]);
+        }
+        this.$.pager.items = [];
+        this.$.pager.push('items', ...pagerPost);
+        this.$.post.items = [];
+        this.$.post.push('items', ...this.item.post);
+    },
+
+    _onPostClick: function(event) {
+        var item = event.model.item;
+        document.title = item.title;
+        window.history.pushState(name, item.title, '#/detail');
+        window.dispatchEvent(new Event('popstate'));
+        this.fire('item-click', {data: item});
+    }
+
+});
+</script>
+</dom-module>
+</body></html>

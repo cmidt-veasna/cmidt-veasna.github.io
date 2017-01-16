@@ -1,0 +1,438 @@
+<html><head><link rel="import" href="../polymer/polymer.html">
+<link rel="import" href="../iron-resizable-behavior/iron-resizable-behavior.html">
+
+
+
+<script>
+
+var Cmidt = Cmidt || {};
+
+/** @polymerBehavior Cmidt.OptionMenuBehavior */
+var OptionMenuBehaviorImpl = {
+
+    properties: {
+        /**
+         * An orientation of the items to be display in the option menu. By default
+         * the orientation is set to horizontal
+         */
+        orientation: {
+            type: String,
+            value: "horizontal",
+            reflectToAttribute: true,
+            observer: "_onOrientaionPropertyChanged"
+        },
+        /**
+         * An aligment of items in the option menu. By default the alignment is set
+         * to right.
+         */
+        align: {
+            type: String,
+            value: "right",
+            reflectToAttribute: true,
+            observer: "_onAlignmentPropertyChanged"
+        },
+        /**
+         * An overflow dropdown vertical alignment. Support only auto, top and bottom.
+         * See iron-dropdown for more information. By default is set to auto which is
+         * up to iron-dropdown to take take of.
+         */
+        overflowVerticalAlign: {
+            type: String,
+            value: "auto",
+            reflectToAttribute: true,
+            observer: "_onOverflowVerticalAlignmentPropertyChanged"
+        },
+        /**
+         * An overflow dropdown horizontal aligment. Support only auto, left and right.
+         * See iron-dropdown for more information. By default is set to auto which is
+         * up to iron-dropdown to take take of.
+         */
+        overflowHorizontalAlign: {
+            type: String,
+            value: "auto",
+            reflectToAttribute: true,
+            observer: "_onOverflowHorizontalAlignmentPropertyChanged"
+        },
+        /**
+         * A property to show title. It's currently use by internal process when attach
+         * the item into dropdown overflow menu. The item will not display title when the item
+         * was attached to option menu and will dispaly when attached to dropdown overflow menu.
+         * It's planned for public use as well for vertical orientation.
+         */
+        showTitle: {
+            type: Boolean,
+            value: false,
+            reflectToAttribute: true
+        },
+        _items: {
+            type: Array,
+            notify: true,
+            observer: "_onPropertyItemsChanged"
+        },
+        _overflowItems: {
+            type: Array,
+            value: [],
+            observer: "_onOverflowItemsChange"
+        },
+        _overflow: {
+            type: Boolean,
+            value: false
+        }
+    },
+
+    listeners: {
+        'iron-resize': '_onIronResize'
+    },
+
+    _shouldAnimate: false,
+
+    _itemSize: Number,
+
+    _isAlwayOverflow: Boolean,
+
+    _pendingOverflowItem: {},
+
+    observers: [
+        '_onOverflowItemsChange(_overflowItems.*)'
+    ],
+
+    get _isVisible() {
+        return Boolean(this.offsetWidth || this.offsetHeight);
+    },
+
+    _onOrientaionPropertyChanged: function(newOrientaion, oldOrientation) {
+        var validOrientation = ['horizontal','vertical'];
+        if(validOrientation.indexOf(newOrientaion) === -1) {
+            // default orientation to horizontal
+            this.orientation = validOrientation[0];
+            console.warn("Cmidt option menu encounter invalid orientation value. It must be either horizontal or vertical.");
+        }
+        this.onOrientationChanged()
+    },
+
+    _onAlignmentPropertyChanged: function(newAlign, oldAlign) {
+        var validAlignment = ['top','bottom','left','right', 'auto'];
+        if(validAlignment.indexOf(newAlign) === -1) {
+            // default orientation to right
+            this.align = validAlignment[3];
+            console.warn("Cmidt option menu encounter invalid alignment value. It must be one of left, top, right and bottom.");
+        }
+        if (this.orientation == 'vertical' && ['left', 'right'].indexOf(this.align) !== -1) {
+            console.warn("Vertical orientation support only top and bottom alignment.");
+            this.align = validAlignment[0];
+
+        }
+        if (this.orientation == 'horizontal' && ['top', 'bottom'].indexOf(this.align) !== -1) {
+            console.warn("horizontal orientation support only left and right alignment.");
+            this.align = validAlignment[3];
+
+        }
+        this.onAligmentChanged();
+    },
+
+    _onOverflowVerticalAlignmentPropertyChanged: function(newAlign, oldAlign) {
+        var validVertialAlignment = ['top','bottom', 'auto'];
+        if(validVertialAlignment.indexOf(newAlign) === -1) {
+            // default orientation to horizontal
+            this.overflowVerticalAlign = validVertialAlignment[0];
+            console.warn("Cmidt option menu encounter invalid overflow aligment value. It must be either top, bottom or auto.");
+        }
+    },
+
+    _onOverflowHorizontalAlignmentPropertyChanged: function(newAlign, oldAlign) {
+        var validHorizontalAlignment = ['left','right','auto'];
+        if(validHorizontalAlignment.indexOf(newAlign) === -1) {
+            // default orientation to horizontal
+            this.overflowHorizontalAlign = validHorizontalAlignment[0];
+            console.warn("Cmidt option menu encounter invalid overflow aligment value. It must be either left, right or auto.");
+        }
+    },
+
+    _onPropertyItemsChanged: function(){
+        // execute template here
+    },
+
+    _onIronResize: function(e) {
+        // process if menus content is populated
+        if (this._isVisible && this.children.length > 0) {
+            var roomSize = this.orientation == 'horizontal' ? this.getBoundingClientRect().width : this.getBoundingClientRect().height;
+            var itemSize = this._itemSize;
+            var requiredSize = this._calculateRequiredSize(itemSize);
+            var minRequiredSize = this._calculateMinimunRequiredSize(itemSize);
+            var actualSize = this._calculateActualSize();
+            this._overflow = this._isAlwayOverflow || roomSize < requiredSize || this._overflowItems.length > 0;
+            if (this._overflow){
+                // overflow item should appear, so +1
+                actualSize += itemSize;
+            }
+            var executePending = false;
+            if (actualSize > roomSize) {
+                // no more room for another item let hide them and put into overflow menu
+                executePending = true;
+                this._pendingOverflowItem = {
+                    actualSize: actualSize,
+                    roomSize: roomSize,
+                    itemSize: itemSize,
+                    hasRoom: false
+                };
+            } else if (actualSize + itemSize <= roomSize
+                && this._shouldReleaseItemFromOverflow()) {
+                // there is room available release item from overflow
+                executePending = true;
+                this._pendingOverflowItem = {
+                    actualSize: actualSize,
+                    roomSize: roomSize,
+                    itemSize: itemSize,
+                    hasRoom: true
+                };
+            }
+            if (executePending){
+                if (this._pendingExecution){
+                    this.cancelAsync(this._pendingExecution);
+                }
+                this._pendingExecution = this.async(this._executePendingOverflowMenuItem, this._shouldAnimate ? 50 : 1);
+            }
+        }
+    },
+
+    _shouldReleaseItemFromOverflow: function() {
+        if (this._overflowItems && this._overflowItems.length > 0){
+            for (let i = 0; i < this._overflowItems.length; i++) {
+                if (!this._overflowItems[i].alwayHide) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    },
+
+    _releaseItemFromOverflow: function(actualSize, itemSize, roomSize) {
+        actualSize += itemSize;
+        var hasPopItem = false;
+        if (this._overflowItems) {
+            var item;
+            for (let i = this._overflowItems.length - 1; i >= 0; i--){
+                if (actualSize <= roomSize && this._overflowItems[i] && !this._overflowItems[i].alwayHide) {
+                    item = this.pop("_overflowItems");
+                    // item must be option menu item behavior, hide the item to fit the room
+                    // item._animate = this._shouldAnimate;
+                    item.showTitle = false;
+                    this.addMenuItem(item, item._indexMenu);
+                    actualSize += itemSize;
+                    hasPopItem = true;
+                }
+            }
+            this._overflow = this._isAlwayOverflow || this._overflowItems.length > 0;
+        }
+        return hasPopItem;
+    },
+
+    _prepareForOverflow: function(actualSize, itemSize, roomSize) {
+        var n = (this.align == "right" || this.align == "bottom") ? this.children.length-1 : 0;
+        var i = 0;
+        var index = 0;
+        var item;
+        while(i < this.children.length){
+            index = Math.abs(n - i);
+            item = this.children[index];
+            i++;
+            // hidden is ignored.
+            if (item._isMenuItem && !item.invisible && item.getId() != 'overflowButton'){
+                actualSize -= itemSize;
+                // item must be option menu item behavior, hide the item to fit the room
+                // item._animate = this._shouldAnimate;
+                this.push("_overflowItems", item);
+                this.removeMenuItem(item);
+                if (actualSize <= roomSize) {
+                    // enough the current visible item is fit with the room
+                    return true;
+                }
+            }
+        }
+        if (actualSize > roomSize) {
+            // not enough space, sacrifice some alwayShow item
+            i = 0;
+            while(i < this.children.length){
+                index = Math.abs(n - i);
+                item = this.children[index];
+                i++;
+                if (item._isMenuItem && !item.invisible && item.getId() != 'overflowButton'){
+                    actualSize -= itemSize;
+                    // item must be option menu item behavior, hide the item to fit the room
+                    // item._animate = this._shouldAnimate;
+                    this.push("_overflowItems", item);
+                    this.removeMenuItem(item);
+                    if (actualSize <= roomSize) {
+                        // enough the current visible item is fit with the room
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    },
+
+    _calculateRequiredSize: function(itemSize) {
+        var requiredSize = 0;
+        var item;
+        for (var index = 0; index < this.children.length; index++){
+            item = this.children[index];
+            if (item._isMenuItem && !item.alwayHide){
+                requiredSize += itemSize;
+            }
+        }
+        return requiredSize;
+    },
+
+    _calculateMinimunRequiredSize: function(itemSize) {
+        var minRequiredSize = 0;
+        var item;
+        for (var index = 0; index < this.children.length; index++){
+            item = this.children[index];
+            if (item._isMenuItem && item.alwayShow && item.getId() != 'overflowButton'){
+                minRequiredSize += itemSize;
+            }
+        }
+        return minRequiredSize;
+    },
+
+    _calculateActualSize: function() {
+        var actualSize = 0;
+        var item;
+        for (var index = 0; index < this.children.length; index++){
+            item = this.children[index];
+            if (item._isMenuItem && !item.invisible && item.getId() != 'overflowButton'){
+                actualSize += item.getBoundingClientRect().width;
+            }
+        }
+        return actualSize;
+    },
+
+    _isMenuItemInOverflow: function(item){
+        return item.parentNode && item.parentNode.localName != 'cmidt-option-menu';
+    },
+
+    _isMenuItemInOption: function(item){
+        return item._isMenuItem && !item.alwayHide && !item.invisible && !this._isMenuItemInOverflow(item);
+    },
+
+    _executePendingOverflowMenuItem: function() {
+        if (this._pendingExecution && this._pendingOverflowItem) {
+            if (this._pendingOverflowItem.hasRoom) {
+                this._releaseItemFromOverflow(this._pendingOverflowItem.actualSize, this._pendingOverflowItem.itemSize, this._pendingOverflowItem.roomSize);
+            } else {
+                this._prepareForOverflow(this._pendingOverflowItem.actualSize, this._pendingOverflowItem.itemSize, this._pendingOverflowItem.roomSize);
+            }
+        }
+        this._pendingOverflowItem = null;
+        this._pendingExecution = null;
+        if (!this._shouldAnimate){
+            this._shouldAnimate = true;
+        }
+    },
+
+    _onOverflowItemsChange: function(){
+    },
+
+    _getItemSize: function() {
+        // implement in option menu
+        console.warn("Component using Cmidt OptionMenuBehavior must implement _getItemSize method.");
+    },
+
+    _onContentItemChanged: function() {
+        this._itemSize = this._getItemSize();
+        this._isAlwayOverflow = false;
+        for (let i = this.children.length-1; i >= 0; i--) {
+            if (this.children[i]._isMenuItem) {
+                this.children[i]._indexMenu = i;
+                if (this.children[i].alwayHide && this.children[i].id != 'overflowButton'){
+                    this._isAlwayOverflow = true;
+                    this.push("_overflowItems", this.children[i]);
+                    this.removeMenuItem(this.children[i]);
+                }
+                if (this.children[i].id != 'overflowButton'){
+                    this.children[i].style['order'] = i+1;
+                }
+            }
+        }
+    },
+
+    /**
+     * Observer listener which is called when orientation value is changed
+     */
+    onOrientationChanged: function() {
+    },
+
+    /**
+     * Observer listener which is called when aligment value is changed
+     */
+    onAligmentChanged: function() {
+    },
+
+    /**
+     * Toggle menu item visibility
+     */
+    toggleMenuItemVisibility: function(menuItem){
+    },
+
+    /**
+     * Show menu item if it was previously hide. The item must hide by calling to the method showMenuItem
+     */
+    showMenuItem: function(menuItem) {
+    },
+
+    /**
+     * Hide menu item if it still visible. It only hide the item but not remove from option menu.
+     */
+    hideMenuItem: function(menuItem) {
+    },
+
+    /**
+     * Add the menu item element to the option menu. The item must hasn't added to option menu
+     */
+    addMenuItem: function(menuItem, index) {
+    },
+
+    /**
+     * Remove the menu item from option menu. The item first will animate out of option menu
+     * then remove from option menu.
+     */
+    removeMenuItem: function(menuItem) {
+    },
+
+    attached: function() {
+        this.async(this.notifyResize, 1);
+        this._shouldAnimate = false;
+    },
+
+    ready: function() {
+        var _this = this;
+        var observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(m) {
+                // only care about cmidt-option-menu
+                if (m.target.localName == 'cmidt-option-menu') {
+                    _this._onContentItemChanged();
+                }
+            });
+        });
+        // Observe attribute changes to child elements
+        observer.observe(this, {
+            attributes: true,
+            subtree: true,
+            attributeOldValue: true
+        });
+    },
+
+    /**
+     * A method to check whether the overflow dropdown menu will visible.
+     */
+    isOverflow: function() {
+        return this._overflow;
+    },
+
+};
+
+Cmidt.OptionMenuBehavior = [Polymer.IronResizableBehavior, OptionMenuBehaviorImpl];
+
+</script>
+</head><body></body></html>

@@ -1,0 +1,136 @@
+<html><head><meta charset="UTF-8"><link rel="import" href="../cmidt-open-lib/cmidt-open-lib.html"></head><body><dom-module id="cmidt-sidebar">
+<template>
+    <style>
+    :host {
+        display: block;
+        box-sizing: border-box;
+        width: 100%;
+        overflow:auto;
+        height: 100%;
+        border-right: 1px solid #e6e6e6;
+        background-color: #fffef6;
+
+        @apply(--layout-vertical);
+        @apply(--layout-center);
+
+        --iron-image-width: 100px;
+        --iron-image-height: 100px;
+    }
+    .line {
+        border-bottom: 1px solid #e6e6e6;
+        margin: 8px 0 8px 0;
+    }
+    iron-image {
+        margin: 16px auto;
+        border-radius: 50%;
+    }
+    iron-selector, pager-item {
+        width: 100%;
+    }
+    iron-selector paper-item {
+        cursor: pointer;
+    }
+    iron-selector a {
+        text-decoration: none;
+        color: black;
+    }
+    iron-selector .iron-selected {
+        background-color: #575757;
+        color: #00aa77;
+    }
+    iron-selector .iron-selected a {
+        color: #00aa77;
+        -webkit-touch-callout: none; /* iOS Safari */
+        -webkit-user-select: none; /* Chrome/Safari/Opera */
+        -khtml-user-select: none; /* Konqueror */
+        -moz-user-select: none; /* Firefox */
+        -ms-user-select: none; /* Internet Explorer/Edge */
+        user-select: none; /* Non-prefixed version, currently not supported by any browser */
+    }
+    iron-selector .iron-selected span {
+        color: white;
+    }
+    .title {
+        margin: 0 0 6px 0;
+    }
+    .my-name {
+        margin: 0 0 16px 0;
+    }
+    .recently {
+        display: inline-block;
+        margin: 16px;
+        text-transform: uppercase;
+    }
+    .logo {
+        position: absolute;
+        bottom: 16px;
+        left: 0;
+        background-color: white;
+        border-radius: 50%;
+        padding: 4px;
+    }
+    </style>
+
+    <div style="position: relative">
+        <iron-image class=".profile" src="/images/myAvatar.png"></iron-image>
+        <iron-icon class="logo" icon="cmidt-icons:logo"></iron-icon>
+    </div>
+    <span class="title">CMDIT</span>
+    <span class="my-name">Veasna Sreng</span>
+    <iron-selector selected="[[selected]]" attr-for-selected="name" selectable="paper-item" on-iron-select="_handleIronSelected">
+        <paper-item name="home">Home</paper-item>
+        <paper-item name="about-me">About Me</paper-item>
+        <div class="line"></div>
+        <span class="recently">Recently Post</span>
+        <template id="recently" is="dom-repeat">
+            <paper-item name$="detail-{{item.id}}">
+                <paper-item-body two-line="">
+                    [[item.title]]
+                    <span secondary="">[[item.content]]</span>
+                </paper-item-body>
+            </paper-item>
+        </template>
+    </iron-selector>
+</template>
+
+<script>
+Polymer({
+
+    is: 'cmidt-sidebar',
+
+    properties: {
+        item: {
+            type: Object,
+            observer: "_onItemChanged"
+        }
+    },
+
+    _onItemChanged: function() {
+        var recentlyPost = [];
+        var recentlyPostIndex = this.item.recently;
+        for (var i = 0; i < recentlyPostIndex.length; i++) {
+            recentlyPost.push(this.item.post[i]);
+        }
+        this.$.recently.items = [];
+        this.$.recently.push('items', ...recentlyPost);
+    },
+
+    _handleIronSelected: function(event) {
+        var name = event.detail.item.getAttribute('name');
+        if (name.startsWith('detail')) {
+            var item = event.detail.item.dataHost.item;
+            this.fire('item-click', {data: item});
+            document.title = item.title;
+            window.history.pushState(name, item.title, '#/'+name+"/"+item.id);
+        } else {
+            var title = name.charAt(0).toUpperCase() + name.slice(1);
+            document.title = title;
+            window.history.pushState(name, title, '#/'+name);
+        }
+        window.dispatchEvent(new Event('popstate'));
+    }
+
+});
+</script>
+</dom-module>
+</body></html>

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="280px" height="40px" viewBox="0 0 280 40" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!-- Generator: Sketch 41.2 (35397) - http://www.bohemiancoding.com/sketch -->
+    <title>Group</title>
+    <desc>Created with Sketch.</desc>
+    <defs></defs>
+    <g id="Page-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="Group">
+            <rect id="Rectangle-2" fill="#FFFFFF" x="0" y="0" width="280" height="40"></rect>
+            <path d="M263,14 C264.104569,14 265,13.1045695 265,12 C265,10.8954305 264.104569,10 263,10 C261.895431,10 261,10.8954305 261,12 C261,13.1045695 261.895431,14 263,14 Z M263,22 C264.104569,22 265,21.1045695 265,20 C265,18.8954305 264.104569,18 263,18 C261.895431,18 261,18.8954305 261,20 C261,21.1045695 261.895431,22 263,22 Z M263,30 C264.104569,30 265,29.1045695 265,28 C265,26.8954305 264.104569,26 263,26 C261.895431,26 261,26.8954305 261,28 C261,29.1045695 261.895431,30 263,30 Z" id="Combined-Shape" fill="#000000"></path>
+            <circle id="Oval-2" fill="#E7E7E7" cx="194" cy="20" r="13"></circle>
+            <circle id="Oval-2" fill="#E7E7E7" cx="234" cy="20" r="13"></circle>
+        </g>
+    </g>
+</svg>

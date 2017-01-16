@@ -1,0 +1,997 @@
+<html><head><meta charset="UTF-8"><link rel="import" href="../cmidt-open-lib/cmidt-open-lib.html"></head><body><div hidden="" by-vulcanize=""><script>Polymer({is:"opaque-animation",behaviors:[Polymer.NeonAnimationBehavior],configure:function(e){var i=e.node;return this._effect=new KeyframeEffect(i,[{opacity:"1"},{opacity:"1"}],this.timingFromConfig(e)),i.style.opacity="0",this._effect},complete:function(e){e.node.style.opacity=""}});</script><script>!function(){"use strict";var e={pageX:0,pageY:0},t=null,l=[];Polymer.IronDropdownScrollManager={get currentLockingElement(){return this._lockingElements[this._lockingElements.length-1]},elementIsScrollLocked:function(e){var t=this.currentLockingElement;if(void 0===t)return!1;var l;return!!this._hasCachedLockedElement(e)||!this._hasCachedUnlockedElement(e)&&(l=!!t&&t!==e&&!this._composedTreeContains(t,e),l?this._lockedElementCache.push(e):this._unlockedElementCache.push(e),l)},pushScrollLock:function(e){this._lockingElements.indexOf(e)>=0||(0===this._lockingElements.length&&this._lockScrollInteractions(),this._lockingElements.push(e),this._lockedElementCache=[],this._unlockedElementCache=[])},removeScrollLock:function(e){var t=this._lockingElements.indexOf(e);t!==-1&&(this._lockingElements.splice(t,1),this._lockedElementCache=[],this._unlockedElementCache=[],0===this._lockingElements.length&&this._unlockScrollInteractions())},_lockingElements:[],_lockedElementCache:null,_unlockedElementCache:null,_hasCachedLockedElement:function(e){return this._lockedElementCache.indexOf(e)>-1},_hasCachedUnlockedElement:function(e){return this._unlockedElementCache.indexOf(e)>-1},_composedTreeContains:function(e,t){var l,n,o,r;if(e.contains(t))return!0;for(l=Polymer.dom(e).querySelectorAll("content"),o=0;o<l.length;++o)for(n=Polymer.dom(l[o]).getDistributedNodes(),r=0;r<n.length;++r)if(this._composedTreeContains(n[r],t))return!0;return!1},_scrollInteractionHandler:function(t){if(t.cancelable&&this._shouldPreventScrolling(t)&&t.preventDefault(),t.targetTouches){var l=t.targetTouches[0];e.pageX=l.pageX,e.pageY=l.pageY}},_lockScrollInteractions:function(){this._boundScrollHandler=this._boundScrollHandler||this._scrollInteractionHandler.bind(this),document.addEventListener("wheel",this._boundScrollHandler,!0),document.addEventListener("mousewheel",this._boundScrollHandler,!0),document.addEventListener("DOMMouseScroll",this._boundScrollHandler,!0),document.addEventListener("touchstart",this._boundScrollHandler,!0),document.addEventListener("touchmove",this._boundScrollHandler,!0)},_unlockScrollInteractions:function(){document.removeEventListener("wheel",this._boundScrollHandler,!0),document.removeEventListener("mousewheel",this._boundScrollHandler,!0),document.removeEventListener("DOMMouseScroll",this._boundScrollHandler,!0),document.removeEventListener("touchstart",this._boundScrollHandler,!0),document.removeEventListener("touchmove",this._boundScrollHandler,!0)},_shouldPreventScrolling:function(e){var n=Polymer.dom(e).rootTarget;if("touchmove"!==e.type&&t!==n&&(t=n,l=this._getScrollableNodes(Polymer.dom(e).path)),!l.length)return!0;if("touchstart"===e.type)return!1;var o=this._getScrollInfo(e);return!this._getScrollingNode(l,o.deltaX,o.deltaY)},_getScrollableNodes:function(e){for(var t=[],l=e.indexOf(this.currentLockingElement),n=0;n<=l;n++)if(e[n].nodeType===Node.ELEMENT_NODE){var o=e[n],r=o.style;"scroll"!==r.overflow&&"auto"!==r.overflow&&(r=window.getComputedStyle(o)),"scroll"!==r.overflow&&"auto"!==r.overflow||t.push(o)}return t},_getScrollingNode:function(e,t,l){if(t||l)for(var n=Math.abs(l)>=Math.abs(t),o=0;o<e.length;o++){var r=e[o],c=!1;if(c=n?l<0?r.scrollTop>0:r.scrollTop<r.scrollHeight-r.clientHeight:t<0?r.scrollLeft>0:r.scrollLeft<r.scrollWidth-r.clientWidth)return r}},_getScrollInfo:function(t){var l={deltaX:t.deltaX,deltaY:t.deltaY};if("deltaX"in t);else if("wheelDeltaX"in t)l.deltaX=-t.wheelDeltaX,l.deltaY=-t.wheelDeltaY;else if("axis"in t)l.deltaX=1===t.axis?t.detail:0,l.deltaY=2===t.axis?t.detail:0;else if(t.targetTouches){var n=t.targetTouches[0];l.deltaX=e.pageX-n.pageX,l.deltaY=e.pageY-n.pageY}return l}}}();</script><dom-module id="iron-dropdown" assetpath="../../bower_components/iron-dropdown/">
+  <template>
+    <style>
+      :host {
+        position: fixed;
+      }
+
+      #contentWrapper ::content > * {
+        overflow: auto;
+      }
+
+      #contentWrapper.animating ::content > * {
+        overflow: hidden;
+      }
+    </style>
+
+    <div id="contentWrapper">
+      <content id="content" select=".dropdown-content"></content>
+    </div>
+  </template>
+
+  <script>!function(){"use strict";Polymer({is:"iron-dropdown",behaviors:[Polymer.IronControlState,Polymer.IronA11yKeysBehavior,Polymer.IronOverlayBehavior,Polymer.NeonAnimationRunnerBehavior],properties:{horizontalAlign:{type:String,value:"left",reflectToAttribute:!0},verticalAlign:{type:String,value:"top",reflectToAttribute:!0},openAnimationConfig:{type:Object},closeAnimationConfig:{type:Object},focusTarget:{type:Object},noAnimations:{type:Boolean,value:!1},allowOutsideScroll:{type:Boolean,value:!1},_boundOnCaptureScroll:{type:Function,value:function(){return this._onCaptureScroll.bind(this)}}},listeners:{"neon-animation-finish":"_onNeonAnimationFinish"},observers:["_updateOverlayPosition(positionTarget, verticalAlign, horizontalAlign, verticalOffset, horizontalOffset)"],get containedElement(){return Polymer.dom(this.$.content).getDistributedNodes()[0]},get _focusTarget(){return this.focusTarget||this.containedElement},ready:function(){this._scrollTop=0,this._scrollLeft=0,this._refitOnScrollRAF=null},attached:function(){this.sizingTarget&&this.sizingTarget!==this||(this.sizingTarget=this.containedElement||this)},detached:function(){this.cancelAnimation(),document.removeEventListener("scroll",this._boundOnCaptureScroll),Polymer.IronDropdownScrollManager.removeScrollLock(this)},_openedChanged:function(){this.opened&&this.disabled?this.cancel():(this.cancelAnimation(),this._updateAnimationConfig(),this._saveScrollPosition(),this.opened?(document.addEventListener("scroll",this._boundOnCaptureScroll),!this.allowOutsideScroll&&Polymer.IronDropdownScrollManager.pushScrollLock(this)):(document.removeEventListener("scroll",this._boundOnCaptureScroll),Polymer.IronDropdownScrollManager.removeScrollLock(this)),Polymer.IronOverlayBehaviorImpl._openedChanged.apply(this,arguments))},_renderOpened:function(){!this.noAnimations&&this.animationConfig.open?(this.$.contentWrapper.classList.add("animating"),this.playAnimation("open")):Polymer.IronOverlayBehaviorImpl._renderOpened.apply(this,arguments)},_renderClosed:function(){!this.noAnimations&&this.animationConfig.close?(this.$.contentWrapper.classList.add("animating"),this.playAnimation("close")):Polymer.IronOverlayBehaviorImpl._renderClosed.apply(this,arguments)},_onNeonAnimationFinish:function(){this.$.contentWrapper.classList.remove("animating"),this.opened?this._finishRenderOpened():this._finishRenderClosed()},_onCaptureScroll:function(){this.allowOutsideScroll?(this._refitOnScrollRAF&&window.cancelAnimationFrame(this._refitOnScrollRAF),this._refitOnScrollRAF=window.requestAnimationFrame(this.refit.bind(this))):this._restoreScrollPosition()},_saveScrollPosition:function(){document.scrollingElement?(this._scrollTop=document.scrollingElement.scrollTop,this._scrollLeft=document.scrollingElement.scrollLeft):(this._scrollTop=Math.max(document.documentElement.scrollTop,document.body.scrollTop),this._scrollLeft=Math.max(document.documentElement.scrollLeft,document.body.scrollLeft))},_restoreScrollPosition:function(){document.scrollingElement?(document.scrollingElement.scrollTop=this._scrollTop,document.scrollingElement.scrollLeft=this._scrollLeft):(document.documentElement.scrollTop=this._scrollTop,document.documentElement.scrollLeft=this._scrollLeft,document.body.scrollTop=this._scrollTop,document.body.scrollLeft=this._scrollLeft)},_updateAnimationConfig:function(){for(var o=this.containedElement,t=[].concat(this.openAnimationConfig||[]).concat(this.closeAnimationConfig||[]),n=0;n<t.length;n++)t[n].node=o;this.animationConfig={open:this.openAnimationConfig,close:this.closeAnimationConfig}},_updateOverlayPosition:function(){this.isAttached&&this.notifyResize()},_applyFocus:function(){var o=this.focusTarget||this.containedElement;o&&this.opened&&!this.noAutoFocus?o.focus():Polymer.IronOverlayBehaviorImpl._applyFocus.apply(this,arguments)}})}();</script>
+</dom-module>
+<script>Polymer({is:"cascaded-animation",behaviors:[Polymer.NeonAnimationBehavior],configure:function(i){this._animations=[];var n=i.nodes,e=[],o=i.nodeDelay||50;i.timing=i.timing||{},i.timing.delay=i.timing.delay||0;for(var t,a,m=i.timing.delay,r=0;a=n[r];r++){i.timing.delay+=o,i.node=a;var s=document.createElement(i.animation);if(!s.isNeonAnimation){console.warn(this.is+":",i.animation,"not found!"),t=!0;break}var f=s.configure(i);this._animations.push(s),e.push(f)}if(i.timing.delay=m,i.node=null,!t)return this._effect=new GroupEffect(e),this._effect},complete:function(){for(var i,n=0;i=this._animations[n];n++)i.complete(i.config)}});</script><script>Polymer({is:"fade-in-animation",behaviors:[Polymer.NeonAnimationBehavior],configure:function(i){var e=i.node;return this._effect=new KeyframeEffect(e,[{opacity:"0"},{opacity:"1"}],this.timingFromConfig(i)),this._effect}});</script><script>Polymer({is:"fade-out-animation",behaviors:[Polymer.NeonAnimationBehavior],configure:function(e){var i=e.node;return this._effect=new KeyframeEffect(i,[{opacity:"1"},{opacity:"0"}],this.timingFromConfig(e)),this._effect}});</script><script>Polymer.NeonSharedElementAnimationBehaviorImpl={properties:{sharedElements:{type:Object}},findSharedElements:function(e){var n=e.fromPage,r=e.toPage;if(!n||!r)return console.warn(this.is+":",n?"toPage":"fromPage","is undefined!"),null;if(!n.sharedElements||!r.sharedElements)return console.warn(this.is+":","sharedElements are undefined for",n.sharedElements?r:n),null;var t=n.sharedElements[e.id],i=r.sharedElements[e.id];return t&&i?(this.sharedElements={from:t,to:i},this.sharedElements):(console.warn(this.is+":","sharedElement with id",e.id,"not found in",t?r:n),null)}},Polymer.NeonSharedElementAnimationBehavior=[Polymer.NeonAnimationBehavior,Polymer.NeonSharedElementAnimationBehaviorImpl];</script><script>Polymer({is:"hero-animation",behaviors:[Polymer.NeonSharedElementAnimationBehavior],configure:function(e){var t=this.findSharedElements(e);if(t){var i=t.from.getBoundingClientRect(),n=t.to.getBoundingClientRect(),o=i.left-n.left,r=i.top-n.top,f=i.width/n.width,s=i.height/n.height;return this._effect=new KeyframeEffect(t.to,[{transform:"translate("+o+"px,"+r+"px) scale("+f+","+s+")"},{transform:"none"}],this.timingFromConfig(e)),this.setPrefixedProperty(t.to,"transformOrigin","0 0"),t.to.style.zIndex=1e4,t.from.style.visibility="hidden",this._effect}},complete:function(e){var t=this.findSharedElements(e);return t?(t.to.style.zIndex="",void(t.from.style.visibility="")):null}});</script><script>Polymer({is:"ripple-animation",behaviors:[Polymer.NeonSharedElementAnimationBehavior],configure:function(t){var e=this.findSharedElements(t);if(!e)return null;var i,r,s=e.to.getBoundingClientRect();if(t.gesture)i=t.gesture.x-(s.left+s.width/2),r=t.gesture.y-(s.top+s.height/2);else{var h=e.from.getBoundingClientRect();i=h.left+h.width/2-(s.left+s.width/2),r=h.top+h.height/2-(s.top+s.height/2)}var n="translate("+i+"px,"+r+"px)",o=Math.max(s.width+2*Math.abs(i),s.height+2*Math.abs(r)),a=Math.sqrt(2*o*o),f=a/s.width,l=a/s.height,d="scale("+f+","+l+")";return this._effect=new KeyframeEffect(e.to,[{transform:n+" scale(0)"},{transform:n+" "+d}],this.timingFromConfig(t)),this.setPrefixedProperty(e.to,"transformOrigin","50% 50%"),e.to.style.borderRadius="50%",this._effect},complete:function(){this.sharedElements&&(this.setPrefixedProperty(this.sharedElements.to,"transformOrigin",""),this.sharedElements.to.style.borderRadius="")}});</script><script>Polymer({is:"reverse-ripple-animation",behaviors:[Polymer.NeonSharedElementAnimationBehavior],configure:function(e){var t=this.findSharedElements(e);if(!t)return null;var r,i,s=t.from.getBoundingClientRect();if(e.gesture)r=e.gesture.x-(s.left+s.width/2),i=e.gesture.y-(s.top+s.height/2);else{var h=t.to.getBoundingClientRect();r=h.left+h.width/2-(s.left+s.width/2),i=h.top+h.height/2-(s.top+s.height/2)}var n="translate("+r+"px,"+i+"px)",o=Math.max(s.width+2*Math.abs(r),s.height+2*Math.abs(i)),a=Math.sqrt(2*o*o),f=a/s.width,m=a/s.height,l="scale("+f+","+m+")";return this._effect=new KeyframeEffect(t.from,[{transform:n+" "+l},{transform:n+" scale(0)"}],this.timingFromConfig(e)),this.setPrefixedProperty(t.from,"transformOrigin","50% 50%"),t.from.style.borderRadius="50%",this._effect},complete:function(){this.sharedElements&&(this.setPrefixedProperty(this.sharedElements.from,"transformOrigin",""),this.sharedElements.from.style.borderRadius="")}});</script><script>Polymer({is:"scale-down-animation",behaviors:[Polymer.NeonAnimationBehavior],configure:function(r){var e=r.node,i="scale(0, 0)";return"x"===r.axis?i="scale(0, 1)":"y"===r.axis&&(i="scale(1, 0)"),this._effect=new KeyframeEffect(e,[{transform:"scale(1,1)"},{transform:i}],this.timingFromConfig(r)),r.transformOrigin&&this.setPrefixedProperty(e,"transformOrigin",r.transformOrigin),this._effect}});</script><script>Polymer({is:"scale-up-animation",behaviors:[Polymer.NeonAnimationBehavior],configure:function(r){var e=r.node,i="scale(0)";return"x"===r.axis?i="scale(0, 1)":"y"===r.axis&&(i="scale(1, 0)"),this._effect=new KeyframeEffect(e,[{transform:i},{transform:"scale(1, 1)"}],this.timingFromConfig(r)),r.transformOrigin&&this.setPrefixedProperty(e,"transformOrigin",r.transformOrigin),this._effect}});</script><script>Polymer({is:"slide-from-right-animation",behaviors:[Polymer.NeonAnimationBehavior],configure:function(r){var i=r.node;return this._effect=new KeyframeEffect(i,[{transform:"translateX(100%)"},{transform:"none"}],this.timingFromConfig(r)),r.transformOrigin?this.setPrefixedProperty(i,"transformOrigin",r.transformOrigin):this.setPrefixedProperty(i,"transformOrigin","0 50%"),this._effect}});</script><script>Polymer({is:"slide-from-top-animation",behaviors:[Polymer.NeonAnimationBehavior],configure:function(r){var i=r.node;return this._effect=new KeyframeEffect(i,[{transform:"translateY(-100%)"},{transform:"translateY(0%)"}],this.timingFromConfig(r)),r.transformOrigin?this.setPrefixedProperty(i,"transformOrigin",r.transformOrigin):this.setPrefixedProperty(i,"transformOrigin","50% 0"),this._effect}});</script><script>Polymer({is:"slide-from-bottom-animation",behaviors:[Polymer.NeonAnimationBehavior],configure:function(r){var t=r.node;return this._effect=new KeyframeEffect(t,[{transform:"translateY(100%)"},{transform:"translateY(0)"}],this.timingFromConfig(r)),r.transformOrigin?this.setPrefixedProperty(t,"transformOrigin",r.transformOrigin):this.setPrefixedProperty(t,"transformOrigin","50% 0"),this._effect}});</script><script>Polymer({is:"slide-left-animation",behaviors:[Polymer.NeonAnimationBehavior],configure:function(r){var e=r.node;return this._effect=new KeyframeEffect(e,[{transform:"none"},{transform:"translateX(-100%)"}],this.timingFromConfig(r)),r.transformOrigin?this.setPrefixedProperty(e,"transformOrigin",r.transformOrigin):this.setPrefixedProperty(e,"transformOrigin","0 50%"),this._effect}});</script><script>Polymer({is:"slide-up-animation",behaviors:[Polymer.NeonAnimationBehavior],configure:function(r){var i=r.node;return this._effect=new KeyframeEffect(i,[{transform:"translate(0)"},{transform:"translateY(-100%)"}],this.timingFromConfig(r)),r.transformOrigin?this.setPrefixedProperty(i,"transformOrigin",r.transformOrigin):this.setPrefixedProperty(i,"transformOrigin","50% 0"),this._effect}});</script><script>Polymer({is:"slide-down-animation",behaviors:[Polymer.NeonAnimationBehavior],configure:function(r){var i=r.node;return this._effect=new KeyframeEffect(i,[{transform:"translateY(0%)"},{transform:"translateY(100%)"}],this.timingFromConfig(r)),r.transformOrigin?this.setPrefixedProperty(i,"transformOrigin",r.transformOrigin):this.setPrefixedProperty(i,"transformOrigin","50% 0"),this._effect}});</script><script>Polymer({is:"transform-animation",behaviors:[Polymer.NeonAnimationBehavior],configure:function(r){var n=r.node,o=r.transformFrom||"none",i=r.transformTo||"none";return this._effect=new KeyframeEffect(n,[{transform:o},{transform:i}],this.timingFromConfig(r)),r.transformOrigin&&this.setPrefixedProperty(n,"transformOrigin",r.transformOrigin),this._effect}});</script><script>
+
+var Cmidt = Cmidt || {};
+
+/** @polymerBehavior Cmidt.OptionMenuBehavior */
+var OptionMenuBehaviorImpl = {
+
+    properties: {
+        /**
+         * An orientation of the items to be display in the option menu. By default
+         * the orientation is set to horizontal
+         */
+        orientation: {
+            type: String,
+            value: "horizontal",
+            reflectToAttribute: true,
+            observer: "_onOrientaionPropertyChanged"
+        },
+        /**
+         * An aligment of items in the option menu. By default the alignment is set
+         * to right.
+         */
+        align: {
+            type: String,
+            value: "right",
+            reflectToAttribute: true,
+            observer: "_onAlignmentPropertyChanged"
+        },
+        /**
+         * An overflow dropdown vertical alignment. Support only auto, top and bottom.
+         * See iron-dropdown for more information. By default is set to auto which is
+         * up to iron-dropdown to take take of.
+         */
+        overflowVerticalAlign: {
+            type: String,
+            value: "auto",
+            reflectToAttribute: true,
+            observer: "_onOverflowVerticalAlignmentPropertyChanged"
+        },
+        /**
+         * An overflow dropdown horizontal aligment. Support only auto, left and right.
+         * See iron-dropdown for more information. By default is set to auto which is
+         * up to iron-dropdown to take take of.
+         */
+        overflowHorizontalAlign: {
+            type: String,
+            value: "auto",
+            reflectToAttribute: true,
+            observer: "_onOverflowHorizontalAlignmentPropertyChanged"
+        },
+        /**
+         * A property to show title. It's currently use by internal process when attach
+         * the item into dropdown overflow menu. The item will not display title when the item
+         * was attached to option menu and will dispaly when attached to dropdown overflow menu.
+         * It's planned for public use as well for vertical orientation.
+         */
+        showTitle: {
+            type: Boolean,
+            value: false,
+            reflectToAttribute: true
+        },
+        _items: {
+            type: Array,
+            notify: true,
+            observer: "_onPropertyItemsChanged"
+        },
+        _overflowItems: {
+            type: Array,
+            value: [],
+            observer: "_onOverflowItemsChange"
+        },
+        _overflow: {
+            type: Boolean,
+            value: false
+        }
+    },
+
+    listeners: {
+        'iron-resize': '_onIronResize'
+    },
+
+    _shouldAnimate: false,
+
+    _itemSize: Number,
+
+    _isAlwayOverflow: Boolean,
+
+    _pendingOverflowItem: {},
+
+    observers: [
+        '_onOverflowItemsChange(_overflowItems.*)'
+    ],
+
+    get _isVisible() {
+        return Boolean(this.offsetWidth || this.offsetHeight);
+    },
+
+    _onOrientaionPropertyChanged: function(newOrientaion, oldOrientation) {
+        var validOrientation = ['horizontal','vertical'];
+        if(validOrientation.indexOf(newOrientaion) === -1) {
+            // default orientation to horizontal
+            this.orientation = validOrientation[0];
+            console.warn("Cmidt option menu encounter invalid orientation value. It must be either horizontal or vertical.");
+        }
+        this.onOrientationChanged()
+    },
+
+    _onAlignmentPropertyChanged: function(newAlign, oldAlign) {
+        var validAlignment = ['top','bottom','left','right', 'auto'];
+        if(validAlignment.indexOf(newAlign) === -1) {
+            // default orientation to right
+            this.align = validAlignment[3];
+            console.warn("Cmidt option menu encounter invalid alignment value. It must be one of left, top, right and bottom.");
+        }
+        if (this.orientation == 'vertical' && ['left', 'right'].indexOf(this.align) !== -1) {
+            console.warn("Vertical orientation support only top and bottom alignment.");
+            this.align = validAlignment[0];
+
+        }
+        if (this.orientation == 'horizontal' && ['top', 'bottom'].indexOf(this.align) !== -1) {
+            console.warn("horizontal orientation support only left and right alignment.");
+            this.align = validAlignment[3];
+
+        }
+        this.onAligmentChanged();
+    },
+
+    _onOverflowVerticalAlignmentPropertyChanged: function(newAlign, oldAlign) {
+        var validVertialAlignment = ['top','bottom', 'auto'];
+        if(validVertialAlignment.indexOf(newAlign) === -1) {
+            // default orientation to horizontal
+            this.overflowVerticalAlign = validVertialAlignment[0];
+            console.warn("Cmidt option menu encounter invalid overflow aligment value. It must be either top, bottom or auto.");
+        }
+    },
+
+    _onOverflowHorizontalAlignmentPropertyChanged: function(newAlign, oldAlign) {
+        var validHorizontalAlignment = ['left','right','auto'];
+        if(validHorizontalAlignment.indexOf(newAlign) === -1) {
+            // default orientation to horizontal
+            this.overflowHorizontalAlign = validHorizontalAlignment[0];
+            console.warn("Cmidt option menu encounter invalid overflow aligment value. It must be either left, right or auto.");
+        }
+    },
+
+    _onPropertyItemsChanged: function(){
+        // execute template here
+    },
+
+    _onIronResize: function(e) {
+        // process if menus content is populated
+        if (this._isVisible && this.children.length > 0) {
+            var roomSize = this.orientation == 'horizontal' ? this.getBoundingClientRect().width : this.getBoundingClientRect().height;
+            var itemSize = this._itemSize;
+            var requiredSize = this._calculateRequiredSize(itemSize);
+            var minRequiredSize = this._calculateMinimunRequiredSize(itemSize);
+            var actualSize = this._calculateActualSize();
+            this._overflow = this._isAlwayOverflow || roomSize < requiredSize || this._overflowItems.length > 0;
+            if (this._overflow){
+                // overflow item should appear, so +1
+                actualSize += itemSize;
+            }
+            var executePending = false;
+            if (actualSize > roomSize) {
+                // no more room for another item let hide them and put into overflow menu
+                executePending = true;
+                this._pendingOverflowItem = {
+                    actualSize: actualSize,
+                    roomSize: roomSize,
+                    itemSize: itemSize,
+                    hasRoom: false
+                };
+            } else if (actualSize + itemSize <= roomSize
+                && this._shouldReleaseItemFromOverflow()) {
+                // there is room available release item from overflow
+                executePending = true;
+                this._pendingOverflowItem = {
+                    actualSize: actualSize,
+                    roomSize: roomSize,
+                    itemSize: itemSize,
+                    hasRoom: true
+                };
+            }
+            if (executePending){
+                if (this._pendingExecution){
+                    this.cancelAsync(this._pendingExecution);
+                }
+                this._pendingExecution = this.async(this._executePendingOverflowMenuItem, this._shouldAnimate ? 50 : 1);
+            }
+        }
+    },
+
+    _shouldReleaseItemFromOverflow: function() {
+        if (this._overflowItems && this._overflowItems.length > 0){
+            for (let i = 0; i < this._overflowItems.length; i++) {
+                if (!this._overflowItems[i].alwayHide) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    },
+
+    _releaseItemFromOverflow: function(actualSize, itemSize, roomSize) {
+        actualSize += itemSize;
+        var hasPopItem = false;
+        if (this._overflowItems) {
+            var item;
+            for (let i = this._overflowItems.length - 1; i >= 0; i--){
+                if (actualSize <= roomSize && this._overflowItems[i] && !this._overflowItems[i].alwayHide) {
+                    item = this.pop("_overflowItems");
+                    // item must be option menu item behavior, hide the item to fit the room
+                    // item._animate = this._shouldAnimate;
+                    item.showTitle = false;
+                    this.addMenuItem(item, item._indexMenu);
+                    actualSize += itemSize;
+                    hasPopItem = true;
+                }
+            }
+            this._overflow = this._isAlwayOverflow || this._overflowItems.length > 0;
+        }
+        return hasPopItem;
+    },
+
+    _prepareForOverflow: function(actualSize, itemSize, roomSize) {
+        var n = (this.align == "right" || this.align == "bottom") ? this.children.length-1 : 0;
+        var i = 0;
+        var index = 0;
+        var item;
+        while(i < this.children.length){
+            index = Math.abs(n - i);
+            item = this.children[index];
+            i++;
+            // hidden is ignored.
+            if (item._isMenuItem && !item.invisible && item.getId() != 'overflowButton'){
+                actualSize -= itemSize;
+                // item must be option menu item behavior, hide the item to fit the room
+                // item._animate = this._shouldAnimate;
+                this.push("_overflowItems", item);
+                this.removeMenuItem(item);
+                if (actualSize <= roomSize) {
+                    // enough the current visible item is fit with the room
+                    return true;
+                }
+            }
+        }
+        if (actualSize > roomSize) {
+            // not enough space, sacrifice some alwayShow item
+            i = 0;
+            while(i < this.children.length){
+                index = Math.abs(n - i);
+                item = this.children[index];
+                i++;
+                if (item._isMenuItem && !item.invisible && item.getId() != 'overflowButton'){
+                    actualSize -= itemSize;
+                    // item must be option menu item behavior, hide the item to fit the room
+                    // item._animate = this._shouldAnimate;
+                    this.push("_overflowItems", item);
+                    this.removeMenuItem(item);
+                    if (actualSize <= roomSize) {
+                        // enough the current visible item is fit with the room
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    },
+
+    _calculateRequiredSize: function(itemSize) {
+        var requiredSize = 0;
+        var item;
+        for (var index = 0; index < this.children.length; index++){
+            item = this.children[index];
+            if (item._isMenuItem && !item.alwayHide){
+                requiredSize += itemSize;
+            }
+        }
+        return requiredSize;
+    },
+
+    _calculateMinimunRequiredSize: function(itemSize) {
+        var minRequiredSize = 0;
+        var item;
+        for (var index = 0; index < this.children.length; index++){
+            item = this.children[index];
+            if (item._isMenuItem && item.alwayShow && item.getId() != 'overflowButton'){
+                minRequiredSize += itemSize;
+            }
+        }
+        return minRequiredSize;
+    },
+
+    _calculateActualSize: function() {
+        var actualSize = 0;
+        var item;
+        for (var index = 0; index < this.children.length; index++){
+            item = this.children[index];
+            if (item._isMenuItem && !item.invisible && item.getId() != 'overflowButton'){
+                actualSize += item.getBoundingClientRect().width;
+            }
+        }
+        return actualSize;
+    },
+
+    _isMenuItemInOverflow: function(item){
+        return item.parentNode && item.parentNode.localName != 'cmidt-option-menu';
+    },
+
+    _isMenuItemInOption: function(item){
+        return item._isMenuItem && !item.alwayHide && !item.invisible && !this._isMenuItemInOverflow(item);
+    },
+
+    _executePendingOverflowMenuItem: function() {
+        if (this._pendingExecution && this._pendingOverflowItem) {
+            if (this._pendingOverflowItem.hasRoom) {
+                this._releaseItemFromOverflow(this._pendingOverflowItem.actualSize, this._pendingOverflowItem.itemSize, this._pendingOverflowItem.roomSize);
+            } else {
+                this._prepareForOverflow(this._pendingOverflowItem.actualSize, this._pendingOverflowItem.itemSize, this._pendingOverflowItem.roomSize);
+            }
+        }
+        this._pendingOverflowItem = null;
+        this._pendingExecution = null;
+        if (!this._shouldAnimate){
+            this._shouldAnimate = true;
+        }
+    },
+
+    _onOverflowItemsChange: function(){
+    },
+
+    _getItemSize: function() {
+        // implement in option menu
+        console.warn("Component using Cmidt OptionMenuBehavior must implement _getItemSize method.");
+    },
+
+    _onContentItemChanged: function() {
+        this._itemSize = this._getItemSize();
+        this._isAlwayOverflow = false;
+        for (let i = this.children.length-1; i >= 0; i--) {
+            if (this.children[i]._isMenuItem) {
+                this.children[i]._indexMenu = i;
+                if (this.children[i].alwayHide && this.children[i].id != 'overflowButton'){
+                    this._isAlwayOverflow = true;
+                    this.push("_overflowItems", this.children[i]);
+                    this.removeMenuItem(this.children[i]);
+                }
+                if (this.children[i].id != 'overflowButton'){
+                    this.children[i].style['order'] = i+1;
+                }
+            }
+        }
+    },
+
+    /**
+     * Observer listener which is called when orientation value is changed
+     */
+    onOrientationChanged: function() {
+    },
+
+    /**
+     * Observer listener which is called when aligment value is changed
+     */
+    onAligmentChanged: function() {
+    },
+
+    /**
+     * Toggle menu item visibility
+     */
+    toggleMenuItemVisibility: function(menuItem){
+    },
+
+    /**
+     * Show menu item if it was previously hide. The item must hide by calling to the method showMenuItem
+     */
+    showMenuItem: function(menuItem) {
+    },
+
+    /**
+     * Hide menu item if it still visible. It only hide the item but not remove from option menu.
+     */
+    hideMenuItem: function(menuItem) {
+    },
+
+    /**
+     * Add the menu item element to the option menu. The item must hasn't added to option menu
+     */
+    addMenuItem: function(menuItem, index) {
+    },
+
+    /**
+     * Remove the menu item from option menu. The item first will animate out of option menu
+     * then remove from option menu.
+     */
+    removeMenuItem: function(menuItem) {
+    },
+
+    attached: function() {
+        this.async(this.notifyResize, 1);
+        this._shouldAnimate = false;
+    },
+
+    ready: function() {
+        var _this = this;
+        var observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(m) {
+                // only care about cmidt-option-menu
+                if (m.target.localName == 'cmidt-option-menu') {
+                    _this._onContentItemChanged();
+                }
+            });
+        });
+        // Observe attribute changes to child elements
+        observer.observe(this, {
+            attributes: true,
+            subtree: true,
+            attributeOldValue: true
+        });
+    },
+
+    /**
+     * A method to check whether the overflow dropdown menu will visible.
+     */
+    isOverflow: function() {
+        return this._overflow;
+    },
+
+};
+
+Cmidt.OptionMenuBehavior = [Polymer.IronResizableBehavior, OptionMenuBehaviorImpl];
+
+</script><script>var Cmidt=Cmidt||{},OptionMenuGenericItemBehaviorImpl={properties:{id:String,title:String,icon:String,disabled:{type:Boolean,value:!1,observer:"_onPropertyDisabledChanged"},selected:{type:Boolean,value:!1,observer:"_onPropertySelectedChanged"},alwayShow:{type:Boolean,value:!1,observer:"_onPropertyAlwayShowChanged"},ifRoom:{type:Boolean,value:!1,observer:"_onPropertyIfRoomChanged"},alwayHide:{type:Boolean,value:!1,observer:"_onPropertyAlwayHideChanged"},invisible:{type:Boolean,observer:"_onVisibilityChanged"},noink:{type:Boolean,observer:"_onPropertyInkChanged"},showTitle:{type:Boolean,value:!1,reflectToAttribute:!0,observer:"_onPropertyShowTitleChanged"},animationConfig:{type:Object,value:function(){var i={visible:[{name:"scale-up-animation",node:this.animatableElement(),timing:{duration:320}},{name:"fade-in-animation",node:this.animatableElement(),timing:{duration:420}}],invisible:[{name:"scale-down-animation",node:this.animatableElement(),timing:{duration:320}},{name:"fade-out-animation",node:this.animatableElement(),timing:{duration:420}}]};return this.onDefineAnimationDefinition(i),i},_rippleRetangle:{type:Boolean,value:!1,notify:!0,observer:"_onRippleFormChanged"}},_representObject:{type:Object,value:function(){return{id:this.id,title:this.title,icon:this.icon,disabled:this.disabled,selected:this.selected,alwayHide:this.alwayHide,alwayShow:this.alwayShow,ifRoom:this.ifRoom,invisible:this.invisible,noink:this.noink,animationConfig:this.animationConfig}},observer:"_onRepresentObjectChanged"}},listeners:{"neon-animation-finish":"_onAnimationFinish",tap:"_onItemTap"},_isMenuItem:!0,_indexMenu:Number,animatableElement:function(){},_onAnimationFinish:function(){this.invisible&&(this.style.display="",this.style.visibility="hidden"),this.parentNode._isSwitchableMenuItem||(this.hidden=this.invisible),this.onAnimationFinished()},_onItemTap:function(i){if(!this.disabled)for(var e=i.target,n=this.parentNode&&"cmidt-option-menu"!==this.parentNode.localName;e;){if("cmidt-option-menu-item"==e.localName){if("cmidt-option-menu-switchable-item"==e.parentNode.localName)return;this.fire("item-tap",{item:{id:this.getId(),title:this.getTitle(),icon:this.getIcon(),item:this,overflow:n}}),n&&this.fire("overflow-item-tap",{item:this});break}e=e.parentNode}i.stopPropagation(),i.preventDefault()},onDefineAnimationDefinition:function(i){},onAnimationFinished:function(){},_onPropertySelectedChanged:function(){this.parentNode&&this.parentNode._isSwitchableMenuItem&&(this.invisible=!this.selected,this.invisible||(this.style.visibility="visible",this.hidden=!1))},_onVisibilityChanged:function(){this.invisible?this.playAnimation("invisible"):(this.style.display="inline-block",this.style.visibility="visible",this.playAnimation("visible"))},_onPropertyDisabledChanged:function(){},_onPropertyAlwayShowChanged:function(){},_onPropertyIfRoomChanged:function(){},_onPropertyAlwayHideChanged:function(){},_onPropertyInkChanged:function(){},_onPropertyShowTitleChanged:function(){},_onRepresentObjectChanged:function(i,e){},getId:function(){return this.id},getTitle:function(){return this.title},getIcon:function(){return this.icon},toggle:function(){this.invisible=!this.invisible},show:function(){this.invisible&&(this.invisible=!1,this.hidden=!1)},hide:function(){this.invisible||(this.invisible=!0)}};Cmidt.OptionMenuGenericItemBehavior=[Polymer.NeonAnimationRunnerBehavior,OptionMenuGenericItemBehaviorImpl];</script><script>var Cmidt=Cmidt||{},OptionMenuItemBehaviorImpl={properties:{_rippleRetangle:{type:Boolean,value:!1,notify:!0,observer:"_onRippleFormChanged"}},observers:["_focusedChanged(receivedFocusFromKeyboard)"],attached:function(){this._rippleRetangle=this.parentNode&&"cmidt-option-menu"!=this.parentNode.localName&&("undefined"!=typeof this.parentNode._isSwitchableMenuItem&&!this.parentNode._isSwitchableMenuItem||"cmidt-option-menu"!=this.parentNode.parentNode.localName)},_focusedChanged:function(e){e&&this.ensureRipple(),this.hasRipple()&&(this._ripple.holdDown=e)},_createRipple:function(){return this._supportRipple(),this._ripple=Polymer.PaperRippleBehavior._createRipple(),this._ripple.id="ink",this._ripple.setAttribute("center",""),this._rippleRetangle||this._ripple.classList.add("circle"),this._ripple},_supportRipple:function(){},_onRippleFormChanged:function(){this._ripple&&this.toggleClass("circle",!this._rippleRetangle,this._ripple)},setRippleRetangle:function(e){this._ripple&&(this._rippleRetangle=e,this.toggleClass("circle",!this._rippleRetangle,this._ripple))}};Cmidt.OptionMenuItemBehavior=[Polymer.IronButtonState,Polymer.IronControlState,Polymer.PaperRippleBehavior,Cmidt.OptionMenuGenericItemBehavior,OptionMenuItemBehaviorImpl];</script><dom-module id="cmidt-option-menu-item-shared-styles" assetpath="../../bower_components/cmidt-option-menu/">
+<template>
+    <style>
+    :host {
+        display: inline-block;
+        position: relative;
+        --inner-item-width: calc(var(--cmidt-option-menu-item-size, 40px) - 16px);
+        --inner-item-height: calc(var(--cmidt-option-menu-item-size, 40px) - 16px);
+
+        outline: none;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+        cursor: pointer;
+        z-index: 0;
+        line-height: 1;
+        padding: 8px;
+        background: transparent;
+
+        width: var(--cmidt-option-menu-item-size, 40px);
+        height: var(--cmidt-option-menu-item-size, 40px);
+
+        /* NOTE: Both values are needed, since some phones require the value to be `transparent`. */
+        -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+        -webkit-tap-highlight-color: transparent;
+
+        /* Because of polymer/2558, this style has lower specificity than * */
+        box-sizing: border-box !important;
+        @apply(--cmidt-option-menu-item);
+    }
+
+    :host #ink {
+      color: var(--paper-icon-button-ink-color, --primary-text-color);
+      opacity: 0.6;
+    }
+
+    :host([disabled]) {
+      color: var(--paper-icon-button-disabled-text, --disabled-text-color);
+      pointer-events: none;
+      cursor: auto;
+
+      @apply(--cmidt-option-menu-item-disabled);
+    }
+
+    :host[show-title] {
+        width: 100%;
+        height: auto;
+        min-width: var(--inner-item-width);
+        padding: 12px;
+        display: block;
+        border-radius: 0;
+    }
+    </style>
+</template>
+</dom-module>
+<dom-module id="cmidt-option-menu-item" assetpath="../../bower_components/cmidt-option-menu/">
+<template>
+    <style include="cmidt-option-menu-item-shared-styles"></style>
+    <style>
+    .item {
+        @apply(--layout-horizontal);
+        @apply(--layout-center-center);
+        height: 100%;
+    }
+
+    :host[show-title] .item {
+        @apply(--layout-start-justified);
+    }
+
+    iron-icon {
+        --iron-icon-width: var(--inner-item-width);
+        --iron-icon-height: var(--inner-item-height);
+        min-width: var(--inner-item-width);
+        min-height: var(--inner-item-width);
+    }
+
+    span {
+        font-size: 14px;
+        text-transform: uppercase;
+        margin: 0 12px;
+    }
+    </style>
+    <div class="item">
+        <iron-icon id="button" noink="[[noink]]" icon="[[icon]]" disabled="[[disabled]]"></iron-icon>
+        <span id="title" hidden="[[!_shouldShowTitle(showTitle, title)]]">[[title]]</span>
+    </div>
+</template>
+
+<script>Polymer({is:"cmidt-option-menu-item",behaviors:[Cmidt.OptionMenuItemBehavior],animatableElement:function(){return this.$.button},onDefineAnimationDefinition:function(i){i.visible.push({name:"fade-in-animation",node:this.$.title,timing:{duration:420}}),i.invisible.push({name:"fade-out-animation",node:this.$.title,timing:{duration:420}})},_shouldShowTitle:function(i,n){return i&&n}});</script>
+</dom-module>
+<script>
+var Cmidt = Cmidt || {};
+
+/** @polymerBehavior Cmidt.OptionMenuSwitchableItemBehavior */
+var OptionMenuSwitchableItemBehaviorImpl = {
+
+    properties: {
+        /**
+         * If present the switchable will switch the item automatically
+         */
+        auto: {
+            type: Boolean,
+            value: false
+        },
+        /**
+         * If present the switchable item will not response to the tap or click event.
+         * Ripple and pointer cursor will not effected until unfreeze.
+         */
+        freeze: {
+            type: Boolean,
+            value: false,
+            reflectToAttribute: true,
+            observer: "_onSwitchableItemFreezed"
+        }
+    },
+
+    _activeItem: Element,
+
+    _isSwitchableMenuItem: true,
+
+    _onSwitchableItemFreezed: function(){
+    },
+
+    _onPropertyDisabledChanged: function(){
+        if (this._activeItem && this._activeItem.localName){
+            this._activeItem.disabled = this.disabled;
+        }
+    },
+
+    ready: function() {
+        this._menus = Polymer.dom(this).children;
+        if (this._menus){
+            for (let i = 0; i < this._menus.length; i++){
+                if (this._menus[i].getAttribute("selected") != null) {
+                    this._activeItem = this._menus[i];
+                    this._activeItem.disabled = this.disabled;
+                }
+            }
+            if (!this._activeItem && this._menus.length > 0){
+                this._activeItem = this._menus[0]
+            }
+        }
+    },
+
+    /**
+     * Toggle the selected item.
+     */
+    toggle: function() {
+        for (let i = 0; i < this._menus.length; i++){
+            this._menus[i].selected = !this._menus[i].selected;
+            if (this._menus[i].selected){
+                this._activeItem = this._menus[i];
+                this._activeItem.disabled = this.disabled;
+            }
+        }
+    },
+
+    /**
+     * Get current selected child id
+     */
+    getActiveItemId: function(){
+        return this._activeItem.getId();
+    },
+
+    /**
+     * Get curernt selected child title
+     */
+    getActiveItemTitle: function(){
+        return this._activeItem.getTitle();
+    },
+
+    /**
+     * Get current select child icon
+     */
+    getActiveItemIcon: function(){
+        return this._activeItem.getIcon();
+    },
+
+    /**
+     *  Get title of the switchable, it's the same as getActiveItemTitle
+     */
+    getTitle: function(){
+        return this._activeItem.getTitle();
+    },
+
+    /**
+     * Get icon of the switchable, it's the same as getActiveItemIcon
+     */
+    getIcon: function(){
+        return this._activeItem.getIcon();
+    },
+
+    /**
+     * Set item id to be selected. This manually animate switch animation between
+     * the current selected item and the new selected item.
+     */
+    setSelectedItemId: function(id) {
+        if (this._activeItem.getId() != id){
+            for (let i = 0; i < this._menus.length; i++){
+                if (this._menus[i].getId() == id){
+                    this._menus[i].selected = true;
+                    this._activeItem.selected = false;
+                    this._activeItem = this._menus[i];
+                    this._activeItem.disabled = this.disabled;
+                    return;
+                }
+            }
+            console.warn("Set selected item id ", id, "was not found.");
+        }
+    },
+
+    /**
+     * Set switchable free. If the state is true then switchable won't response to
+     * the tap or click event. Ripple and other style such as cursor pointer will be
+     * temporary disactivated and reactivated until the switchable is unfreezed.
+     */
+    setFreeze: function(state){
+        this.freeze = state;
+        this.noink = state;
+        for (let i = 0; i < this._menus.length; i++){
+            this._menus[i].noink = state;
+        }
+    }
+
+};
+
+Cmidt.OptionMenuSwitchableItemBehavior = [Cmidt.OptionMenuGenericItemBehavior, OptionMenuSwitchableItemBehaviorImpl];
+</script><dom-module id="cmidt-option-menu-switchable-item-shared-styles" assetpath="../../bower_components/cmidt-option-menu/">
+<template>
+    <style>
+    :host {
+        display: block;
+        position: relative;
+        --inner-item-width: calc(var(--cmidt-option-menu-item-size, 40px) - 16px);
+        --inner-item-height: calc(var(--cmidt-option-menu-item-size, 40px) - 16px);
+        height: var(--cmidt-option-menu-item-size, 40px);
+        box-sizing: border-box !important;
+    }
+
+    :host ::content > * {
+        /*@apply(--layout-fit);*/
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+    }
+
+    :host[show-title] {
+        width: 100%;
+        height: calc(var(--inner-item-height) + 24px);
+    }
+    </style>
+</template>
+</dom-module>
+<dom-module id="cmidt-option-menu-switchable-item" assetpath="../../bower_components/cmidt-option-menu/">
+    <template>
+    <style include="cmidt-option-menu-switchable-item-shared-styles"></style>
+    <style>
+    #fake {
+        display: inline-block;
+        position: relative;
+        visibility: hidden;
+    }
+
+    :host[show-title] #fake {
+        font-size: 14px;
+        padding: 0 24px 0 calc(var(--inner-item-height) + 24px);
+        height: calc(var(--inner-item-height) + 24px);
+        text-transform: uppercase;
+    }
+    </style>
+    <div id="fake"></div>
+    <content><content>
+</content></content></template>
+
+<script>
+Polymer({
+
+    is: 'cmidt-option-menu-switchable-item',
+
+    behaviors: [
+        Cmidt.OptionMenuSwitchableItemBehavior
+    ],
+
+    _activeItem: Element,
+
+    _maxWidth: 0,
+
+    attached: function() {
+        if (this._menus){
+            var title = "";
+            for (let i = 0; i < this._menus.length; i++){
+                var childTitle = this._menus[i].getTitle();
+                if (childTitle.length > title.length){
+                    title = childTitle;
+                }
+            }
+            this.$.fake.innerHTML = title;
+        }
+    },
+
+    _onPropertyDisabledChanged: function() {
+        if (this._activeItem && this._activeItem.localName){
+            this._activeItem.disabled = this.disabled;
+        }
+    },
+
+    _onPropertyShowTitleChanged: function() {
+        if (this._menus){
+            for (let i = 0; i < this._menus.length; i++){
+                this._menus[i].showTitle = this.showTitle;
+            }
+        }
+    },
+
+    _onSwitchableItemFreezed: function(){
+    },
+
+    _onItemTap: function(e) {
+        if (!this.disabled && !this.freeze){
+            e.stopPropagation();
+            e.preventDefault();
+            var target = e.target;
+            var isFromOverflow = this.parentNode && this.parentNode.localName !== 'cmidt-option-menu';
+            while (target) {
+                if (target.localName == 'cmidt-option-menu-switchable-item'){
+                    this.fire('item-tap',{item: {
+                        id: target.getActiveItemId(),
+                        title: target.getActiveItemTitle(),
+                        icon: target.getActiveItemIcon(),
+                        item: target._activeItem,
+                        switchable: this,
+                        overflow: isFromOverflow
+                    }});
+                    break;
+                }
+                target = target.parentNode;
+            }
+            if (this.id) {
+                // inform that parent node switchable item has tapped
+                this.fire('item-tap',{item: {
+                    id: target.getId(),
+                    title: target.getTitle(),
+                    item: this,
+                    overflow: isFromOverflow
+                }});
+            }
+            if (isFromOverflow){
+                this.fire('overflow-item-tap', {item: target, switchable: this});
+            }
+            if (this.auto) {
+                this.toggle();
+            }
+        }
+    },
+
+});
+</script>
+</dom-module>
+<script>Polymer({is:"cmidt-grow-animation",behaviors:[Polymer.NeonAnimationBehavior],configure:function(i){var e=i.node,t=e.getBoundingClientRect().height,n=(e.getBoundingClientRect().width,t/2),o={height:n+"px"},g={height:t+"px"};return"bottom"==i.verticalAlign()&&(o.marginTop=n+"px",g.marginTop="0"),this._effect=new KeyframeEffect(e,[o,g],this.timingFromConfig(i)),this._effect}});</script><dom-module id="cmidt-option-menu" assetpath="../../bower_components/cmidt-option-menu/">
+<template>
+    <style>
+    :host {
+        display: block;
+        position: relative;
+        overflow: hidden;
+        @apply(--cmidt-option-menu);
+    }
+
+    :host[orientation="horizontal"] {
+        @apply(--layout-horizontal);
+    }
+
+    :host[orientation="vertical"] {
+        @apply(--layout-vertical);
+        display: inline-flex;
+    }
+
+    :host[align="right"] {
+        @apply(--layout-end-justified);
+    }
+
+    :host[align="bottom"] {
+        @apply(--layout-end);
+    }
+
+    :host[align="left"] {
+        @apply(--layout-start-justified);
+    }
+
+    :host[align="top"] {
+        @apply(--layout-start);
+    }
+
+    :host[align="left"] #overflowButton, :host[align="top"] #overflowButton {
+        order: 0;
+        @apply(--cmidt-option-menu-overlow-order);
+    }
+
+    :host[align="right"] #overflowButton, :host[align="bottom"] #overflowButton {
+        order: 1000;
+        @apply(--cmidt-option-menu-overlow-order);
+    }
+
+    #dropdown {
+        width: auto;;
+        height: auto;
+        overflow: inherit;
+        min-width: inherit;
+        min-height: inherit;
+    }
+
+    :host ::content > * {
+        /*order: 1;*/
+    }
+
+    #overflowButton, :host ::content > * {
+        width: var(--cmidt-option-menu-item-size, 40px);
+        height: var(--cmidt-option-menu-item-size, 40px);
+        min-width: var(--cmidt-option-menu-item-size, 40px);
+        min-height: var(--cmidt-option-menu-item-size, 40px);
+        overflow: hidden;
+    }
+
+    .show-item, :host ::content > .show-item {
+        /* 0 does not work so we have to use a small number */
+        /* Start our small */
+        width: 0;
+        min-width: 0;
+        opacity: 0;
+        transform: scale(0,0);
+
+        -webkit-animation: widthGrow 250ms ease forwards, itemAppear 250ms ease-in-out 100ms forwards;
+        -o-animation: widthGrow 250ms ease forwards, itemAppear 250ms ease-in-out 100ms forwards;
+        animation: widthGrow 250ms ease forwards, itemAppear 250ms ease-in-out 100ms forwards;
+    }
+
+    .hide-item, :host ::content > .hide-item {
+        width: var(--cmidt-option-menu-item-size, 40px);
+        min-width: var(--cmidt-option-menu-item-size, 40px);
+        opacity: 1;
+        transform: scale(1,1);
+
+        -webkit-animation: itemDisappear 250ms ease-in-out forwards, widthShrink 200ms ease 150ms forwards;
+        -o-animation: itemDisappear 250ms ease-in-out forwards, widthShrink 200ms ease 150ms forwards;
+        animation: itemDisappear 250ms ease-in-out forwards, widthShrink 200ms ease 150ms forwards;
+    }
+
+    @-webkit-keyframes itemDisappear {
+        to { opacity: 0; transform: scale(0,0); }
+    }
+    @-o-keyframes itemDisappear {
+        to { opacity: 0; transform: scale(0,0); }
+    }
+    @keyframes itemDisappear {
+        to { opacity: 0; transform: scale(0,0); }
+    }
+
+    @-webkit-keyframes widthShrink {
+        to { width: 0; min-width:0; }
+    }
+    @-o-keyframes widthShrink {
+        to { width: 0; min-width:0; }
+    }
+    @keyframes widthShrink {
+        to { width: 0; min-width:0; }
+    }
+
+    @-webkit-keyframes itemAppear {
+        to { opacity: 1; transform: scale(1,1); }
+    }
+    @-o-keyframes itemAppear {
+        to { opacity: 1; transform: scale(1,1); }
+    }
+    @keyframes itemAppear {
+        to { opacity: 1; transform: scale(1,1); }
+    }
+
+    @-webkit-keyframes widthGrow {
+        to { width: var(--cmidt-option-menu-item-size, 40px); min-width: var(--cmidt-option-menu-item-size, 40px); }
+    }
+    @-o-keyframes widthGrow {
+        to { width: var(--cmidt-option-menu-item-size, 40px); min-width: var(--cmidt-option-menu-item-size, 40px); }
+    }
+    @keyframes widthGrow {
+        to { width: var(--cmidt-option-menu-item-size, 40px); min-width: var(--cmidt-option-menu-item-size, 40px); }
+    }
+
+    #dropdown {
+        padding: 2px;
+    }
+
+    #listbox {
+        @apply(--layout-verical);
+        @apply(--shadow-elevation-2dp);
+        background-color: white;
+    }
+
+    #listbox ::content > cmidt-option-menu-item, #listbox ::content > cmidt-option-menu-switchable-item {
+        color: black;
+    }
+    </style>
+    <content></content>
+    <cmidt-option-menu-item id="overflowButton" title="overflow" class="dropdown-trigger" on-tap="_handleOverflowTap" icon="[[_getOverflowIcon(orientation, overflow)]]" hidden="[[!_overflow]]" invisible="[[!_overflow]]"></cmidt-option-menu-item>
+    <iron-dropdown id="dropdown" vertical-align="[[_getDropdownVerticalAlign(orientation, align, overflowVerticalAlign)]]" horizontal-align="[[_getDropdownHorizontalAlign(orientation, align, overflowHorizontalAlign)]]" open-animation-config="[[_openAnimationConfig]]" close-animation-config="[[_closeAnimationConfig]]">
+        <div id="listbox" class="dropdown-content">
+        </div>
+    </iron-dropdown>
+</template>
+
+<script>Polymer({is:"cmidt-option-menu",behaviors:[Cmidt.OptionMenuBehavior],properties:{overflow:{type:String,value:""},_openAnimationConfig:{type:Array,value:function(){var t=this;return[{name:"fade-in-animation",timing:{delay:150,duration:50}},{name:"cmidt-grow-animation",verticalAlign:function(){return t._getVerticalAlignment()},horizontalAlign:function(){return t._getHorizontalAlignment()},timing:{delay:150,duration:200}}]}},_closeAnimationConfig:{type:Array,value:function(){return[{name:"fade-out-animation",timing:{duration:200}}]}}},listeners:{"overflow-item-tap":"_handleOverflowItemTap"},_getVerticalAlignment:function(){return this._getDropdownVerticalAlign(this.orientation,this.align,this.overflowVerticalAlign)},_getHorizontalAlignment:function(){return this._getDropdownHorizontalAlign(this.orientation,this.align,this.overflowHorizontalAlign)},_getOverflowIcon:function(t,e){return e?e:"horizontal"==t?"icons:more-vert":"icons:more-horiz"},_getDropdownVerticalAlign:function(t,e,i){return"vertical"==t?e:i},_getDropdownHorizontalAlign:function(t,e,i){return"horizontal"==t?e:i},_handleOverflowTap:function(t){this.$.dropdown.open()},_handleOverflowItemTap:function(t){this.$.dropdown.close()},_onOverflowItemsChange:function(t){this.$.dropdown.close()},toggleMenuItemVisibility:function(t){t._isInvisible?this.showMenuItem(t):this.hideMenuItem(t)},showMenuItem:function(t){this.toggleClass("hide-item",!1,t),this.toggleClass("show-item",!0,t),t._isInvisible=!1},hideMenuItem:function(t){this.toggleClass("show-item",!1,t),this.toggleClass("hide-item",!0,t),t._isInvisible=!0},addMenuItem:function(t,e){var i=Polymer.dom(this.$.listbox),n=i.querySelector("#"+t.id);n&&i.removeChild(n);var o=Polymer.dom(this);if(!t.classList.contains("show-item")&&!o.querySelector("#"+t.id)){var s=o.querySelector(":scope > :nth-child("+e+")");this._menuItems&&e==this._menuItems.length-1||!s?o.appendChild(t):o.insertBefore(t,s),this.toggleClass("hide-item",!1,t),this.toggleClass("show-item",!0,t),this._listenCssAnimaton(t,"AnimationEnd","_onItemAppeared")}},removeMenuItem:function(t){!t.classList.contains("hide-item")&&Polymer.dom(this).querySelector("#"+t.id)&&(this._shouldAnimate?(this.toggleClass("show-item",!1,t),this.toggleClass("hide-item",!0,t),this._listenCssAnimaton(t,"AnimationEnd","_onItemDisappeared")):this._addToOverflow(t))},_getItemSize:function(){return this.children[0].getBoundingClientRect().width||this.$.overflowButton.getBoundingClientRect().width},_onItemAppeared:function(t){this._unlistenCssAnimaton(t.target,"AnimationEnd","_onItemAppeared"),this.toggleClass("show-item",!1,t.target)},_onItemDisappeared:function(t){t.target._isMenuItem&&(this._unlistenCssAnimaton(t.target,"AnimationEnd","_onItemDisappeared"),this._addToOverflow(t.target),this.toggleClass("hide-item",!1,t.target))},_addToOverflow:function(t){if(Polymer.dom(this).removeChild(t),this._overflowItems)for(var e=0;e<this._overflowItems.length;e++)if(this._overflowItems[e]==t){Polymer.dom(this.$.listbox).appendChild(t),t.showTitle=!0;break}},_listenCssAnimaton:function(t,e,i){for(var n=["webkit","moz","MS","o",""],o=0;o<n.length;o++)n[o]||(e=e.toLowerCase()),this.listen(t,n[o]+e,i)},_unlistenCssAnimaton:function(t,e,i){for(var n=["webkit","moz","MS","o",""],o=0;o<n.length;o++)n[o]||(e=e.toLowerCase()),this.unlisten(t,n[o]+e,i)}});</script>
+</dom-module>
+</div><dom-module id="cmidt-option-menu-sample">
+<template>
+    <style>
+    :host {
+        display: block;
+    }
+    cmidt-option-menu {
+        background-color: #007691;
+        padding-top: 4px;
+        padding-bottom: 4px;
+        color: white;
+    }
+    </style>
+
+    <cmidt-option-menu id="option">
+        <cmidt-option-menu-item id="shopping" title="add shopping" icon="icons:add-shopping-cart"></cmidt-option-menu-item>
+        <cmidt-option-menu-item id="create" title="create" icon="icons:create" disabled=""></cmidt-option-menu-item>
+        <cmidt-option-menu-switchable-item id="switchable0" auto="">
+            <cmidt-option-menu-item id="download" title="download" icon="icons:cloud-download" selected=""></cmidt-option-menu-item>
+            <cmidt-option-menu-item id="past" title="paste" icon="icons:content-paste"></cmidt-option-menu-item>
+        </cmidt-option-menu-switchable-item>
+        <cmidt-option-menu-item id="copy" title="copy" icon="icons:content-copy" alway-hide=""></cmidt-option-menu-item>
+        <cmidt-option-menu-item id="attachment" title="attachement" icon="icons:attachment" alway-hide=""></cmidt-option-menu-item>
+        <cmidt-option-menu-item id="fingerprint" title="fingerprint" icon="icons:fingerprint" alway-hide=""></cmidt-option-menu-item>
+    </cmidt-option-menu>
+</template>
+
+<script>Polymer({is:"cmidt-option-menu-sample",properties:{}});</script>
+</dom-module>
+</body></html>

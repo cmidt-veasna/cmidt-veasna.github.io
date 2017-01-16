@@ -1,0 +1,7 @@
+<html><head><link rel="import" href="../polymer/polymer.html">
+<link rel="import" href="../iron-behaviors/iron-button-state.html">
+<link rel="import" href="../paper-behaviors/paper-ripple-behavior.html">
+<link rel="import" href="cmidt-option-menu-generic-item-behavior.html">
+
+<script>var Cmidt=Cmidt||{},OptionMenuItemBehaviorImpl={properties:{_rippleRetangle:{type:Boolean,value:!1,notify:!0,observer:"_onRippleFormChanged"}},observers:["_focusedChanged(receivedFocusFromKeyboard)"],attached:function(){this._rippleRetangle=this.parentNode&&"cmidt-option-menu"!=this.parentNode.localName&&("undefined"!=typeof this.parentNode._isSwitchableMenuItem&&!this.parentNode._isSwitchableMenuItem||"cmidt-option-menu"!=this.parentNode.parentNode.localName)},_focusedChanged:function(e){e&&this.ensureRipple(),this.hasRipple()&&(this._ripple.holdDown=e)},_createRipple:function(){return this._supportRipple(),this._ripple=Polymer.PaperRippleBehavior._createRipple(),this._ripple.id="ink",this._ripple.setAttribute("center",""),this._rippleRetangle||this._ripple.classList.add("circle"),this._ripple},_supportRipple:function(){},_onRippleFormChanged:function(){this._ripple&&this.toggleClass("circle",!this._rippleRetangle,this._ripple)},setRippleRetangle:function(e){this._ripple&&(this._rippleRetangle=e,this.toggleClass("circle",!this._rippleRetangle,this._ripple))}};Cmidt.OptionMenuItemBehavior=[Polymer.IronButtonState,Polymer.IronControlState,Polymer.PaperRippleBehavior,Cmidt.OptionMenuGenericItemBehavior,OptionMenuItemBehaviorImpl];</script>
+</head><body></body></html>
